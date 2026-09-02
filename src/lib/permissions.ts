@@ -37,6 +37,7 @@ export function hasAnyPermission(
 export const NAV_PERMISSIONS: Record<string, PermissionKey> = {
   '/dashboard': PERMS.dashboardView,
   '/properties': PERMS.propertiesView,
+  '/clients': PERMS.propertiesView,
   '/payments': PERMS.paymentsView,
   '/expenses': PERMS.expensesView,
   '/reports': PERMS.reportsView,

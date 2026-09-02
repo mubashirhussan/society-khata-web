@@ -59,7 +59,7 @@ export default function DashboardPage() {
     ...(can(PERMS.propertiesCreate)
       ? [
           { label: 'Add Property', urdu: 'پلاٹ و گاہک شامل کریں', icon: Plus, href: '/properties', color: 'bg-primary-600 hover:bg-primary-700' },
-          { label: 'New Client', urdu: 'نیا گاہک', icon: UserPlus, href: '/properties', color: 'bg-accent-600 hover:bg-accent-700' },
+          { label: 'New Client', urdu: 'نیا گاہک', icon: UserPlus, href: '/clients', color: 'bg-accent-600 hover:bg-accent-700' },
         ]
       : can(PERMS.propertiesView)
         ? [{ label: 'View Properties', urdu: 'جائیداد دیکھیں', icon: Building2, href: '/properties', color: 'bg-primary-600 hover:bg-primary-700' }]

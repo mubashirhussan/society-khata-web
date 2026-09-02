@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Users,
+  UserRound,
   Shield,
 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -23,7 +24,8 @@ import { hasPermission, NAV_PERMISSIONS } from '@/lib/permissions'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', urdu: 'ڈیش بورڈ', icon: LayoutDashboard },
-  { href: '/properties', label: 'Properties & Clients', urdu: 'پلاٹ و گاہک', icon: Building2 },
+  { href: '/properties', label: 'Properties', urdu: 'جائیداد', icon: Building2 },
+  { href: '/clients', label: 'Clients', urdu: 'گاہک', icon: UserRound },
   { href: '/payments', label: 'Payments', urdu: 'ادائیگی', icon: Wallet },
   { href: '/expenses', label: 'Expenses', urdu: 'اخراجات', icon: Receipt },
   { href: '/reports', label: 'Reports', urdu: 'رپورٹ', icon: FileText },
