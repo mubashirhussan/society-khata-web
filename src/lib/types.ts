@@ -50,6 +50,7 @@ export interface Client {
   address: string | null
   fatherHusband: string | null
   notes: string | null
+  hasPicture: boolean
   createdAt: string
 }
 
@@ -107,6 +108,31 @@ export interface PaymentRequest {
   amount: number
   paymentDate: string
   notes?: string | null
+  paymentMethod?: 'full' | 'installment'
+  installmentSchedule?: InstallmentScheduleItem[]
+  installmentDueId?: string | null
+  planFrequency?: 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | null
+}
+
+export interface InstallmentScheduleItem {
+  dueDate: string
+  amount: number
+}
+
+export interface PaymentLedgerRow {
+  id: string
+  rowType: 'payment' | 'installment'
+  status: 'received' | 'pending' | 'overdue'
+  receiptNo: string | null
+  clientId: string | null
+  propertyId: string | null
+  amount: number
+  date: string
+  notes: string | null
+  paymentId: string | null
+  planFrequency: 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | null
+  client?: Client | null
+  property?: Property | null
 }
 
 export interface Expense {

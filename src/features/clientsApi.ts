@@ -15,6 +15,20 @@ export const clientsApi = api.injectEndpoints({
       query: ({ id, body }) => ({ url: `/clients/${id}`, method: 'PUT', body }),
       invalidatesTags: ['Clients', 'Properties', 'Payments', 'Dashboard'],
     }),
+    uploadClientPicture: build.mutation<Client, { id: string; picture: File }>({
+      query: ({ id, picture }) => {
+        const body = new FormData()
+        body.append('picture', picture)
+        return { url: `/clients/${id}/picture`, method: 'POST', body }
+      },
+      invalidatesTags: ['Clients'],
+    }),
+    getClientPicture: build.query<Blob, string>({
+      query: (id) => ({
+        url: `/clients/${id}/picture`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
     deleteClient: build.mutation<void, string>({
       query: (id) => ({ url: `/clients/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Clients', 'Properties', 'Dashboard'],
@@ -26,5 +40,7 @@ export const {
   useGetClientsQuery,
   useCreateClientMutation,
   useUpdateClientMutation,
+  useUploadClientPictureMutation,
+  useGetClientPictureQuery,
   useDeleteClientMutation,
 } = clientsApi

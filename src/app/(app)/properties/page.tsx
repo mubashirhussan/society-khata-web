@@ -8,11 +8,10 @@ import {
   useUpdatePropertyMutation,
   useDeletePropertyMutation,
 } from '@/features/propertiesApi'
-import { useGetClientsQuery } from '@/features/clientsApi'
 import { formatPKR, formatDate, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
-import type { Client, Property } from '@/lib/types'
+import type { Property } from '@/lib/types'
 import Modal, { ModalActions, Field, inputCls } from '@/components/Modal'
 
 export default function PropertiesPage() {
@@ -23,14 +22,13 @@ export default function PropertiesPage() {
   const canDelete = can(PERMS.propertiesDelete)
   const canManage = canCreate || canEdit || canDelete
   const { data: properties = [], isLoading: loadingProps } = useGetPropertiesQuery()
-  const { data: clients = [], isLoading: loadingClients } = useGetClientsQuery()
   const [deleteProperty] = useDeletePropertyMutation()
 
   const [search, setSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingProperty, setEditingProperty] = useState<Property | null>(null)
 
-  const loading = loadingProps || loadingClients
+  const loading = loadingProps
 
   const filtered = properties.filter((p) => {
     const q = search.toLowerCase()
@@ -176,7 +174,6 @@ export default function PropertiesPage() {
       {showAddModal && (canCreate || (editingProperty && canEdit)) && (
         <PropertyModal
           property={editingProperty}
-          clients={clients}
           onClose={() => setShowAddModal(false)}
           onSaved={() => setShowAddModal(false)}
         />
@@ -187,12 +184,10 @@ export default function PropertiesPage() {
 
 function PropertyModal({
   property,
-  clients,
   onClose,
   onSaved,
 }: {
   property: Property | null
-  clients: Client[]
   onClose: () => void
   onSaved: () => void
 }) {
@@ -203,8 +198,6 @@ function PropertyModal({
   const [marla, setMarla] = useState(property?.marla?.toString() ?? '')
   const [totalPrice, setTotalPrice] = useState(property?.totalPrice?.toString() ?? '')
   const [bookingDate, setBookingDate] = useState(property?.bookingDate ?? '')
-  const [status, setStatus] = useState(property?.status ?? 'available')
-  const [existingClientId, setExistingClientId] = useState(property?.clientId ?? '')
   const [notes, setNotes] = useState(property?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -219,8 +212,8 @@ function PropertyModal({
       marla: marla ? parseFloat(marla) : null,
       totalPrice: totalPrice ? parseFloat(totalPrice) : 0,
       bookingDate: bookingDate || null,
-      status,
-      clientId: existingClientId || null,
+      status: property?.status ?? 'available',
+      clientId: property?.clientId ?? null,
       notes: notes || null,
     }
     try {
@@ -276,31 +269,8 @@ function PropertyModal({
             />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Booking Date" urdu="بکنگ کی تاریخ">
-            <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Status" urdu="حالت">
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-              <option value="available">Available</option>
-              <option value="booked">Booked</option>
-              <option value="sold">Sold</option>
-            </select>
-          </Field>
-        </div>
-        <Field label="Assign Client" urdu="مختص جائیداد">
-          <select
-            value={existingClientId}
-            onChange={(e) => setExistingClientId(e.target.value)}
-            className={inputCls}
-          >
-            <option value="">— Select client... گاہک منتخب کریں —</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+        <Field label="Booking Date" urdu="بکنگ کی تاریخ">
+          <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} className={inputCls} />
         </Field>
         <Field label="Notes" urdu="نوٹس">
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={inputCls} />

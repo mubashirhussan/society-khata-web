@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { Building2, Edit2, MapPin, Phone, Plus, Search, Trash2, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import { Building2, Edit2, ImagePlus, MapPin, Phone, Plus, Search, Trash2, User } from 'lucide-react'
 import {
   useCreateClientMutation,
   useDeleteClientMutation,
+  useGetClientPictureQuery,
   useGetClientsQuery,
+  useUploadClientPictureMutation,
   useUpdateClientMutation,
 } from '@/features/clientsApi'
 import { useGetPropertiesQuery } from '@/features/propertiesApi'
@@ -99,9 +102,7 @@ export default function ClientsPage() {
                   onClick={() => setSelectedClient(client)}
                   className="flex items-center gap-2 text-left min-w-0"
                 >
-                  <span className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-primary-600" />
-                  </span>
+                  <ClientAvatar client={client} size="small" />
                   <span className="min-w-0">
                     <span className="block font-medium text-slate-800 text-sm truncate hover:text-primary-600">
                       {client.name}
@@ -197,14 +198,24 @@ function ClientModal({
 }) {
   const [createClient] = useCreateClientMutation()
   const [updateClient] = useUpdateClientMutation()
+  const [uploadClientPicture] = useUploadClientPictureMutation()
   const [name, setName] = useState(client?.name ?? '')
   const [cnic, setCnic] = useState(client?.cnic ?? '')
   const [phone, setPhone] = useState(client?.phone ?? '')
   const [address, setAddress] = useState(client?.address ?? '')
   const [fatherHusband, setFatherHusband] = useState(client?.fatherHusband ?? '')
   const [notes, setNotes] = useState(client?.notes ?? '')
+  const [picture, setPicture] = useState<File | null>(null)
+  const [picturePreview, setPicturePreview] = useState<string | null>(null)
+  const [createdClientId, setCreatedClientId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (picturePreview) URL.revokeObjectURL(picturePreview)
+    }
+  }, [picturePreview])
 
   const handleSave = async () => {
     if (!name.trim()) return
@@ -222,7 +233,15 @@ function ClientModal({
       if (client) {
         await updateClient({ id: client.id, body }).unwrap()
       } else {
-        await createClient(body).unwrap()
+        let clientId = createdClientId
+        if (!clientId) {
+          const createdClient = await createClient(body).unwrap()
+          clientId = createdClient.id
+          setCreatedClientId(clientId)
+        }
+        if (picture) {
+          await uploadClientPicture({ id: clientId, picture }).unwrap()
+        }
       }
       onSaved()
     } catch (err) {
@@ -235,6 +254,49 @@ function ClientModal({
   return (
     <Modal title={client ? 'Edit Client' : 'New Client'} onClose={onClose}>
       <div className="space-y-4">
+        {!client && (
+          <Field label="Client Picture (optional)" urdu="گاہک کی تصویر">
+            <label className="flex items-center gap-4 rounded-lg border border-dashed border-slate-300 p-3 cursor-pointer hover:border-primary-400 transition-colors">
+              <span className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                {picturePreview ? (
+                  <Image
+                    src={picturePreview}
+                    alt="Client preview"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <ImagePlus className="w-6 h-6 text-slate-400" />
+                )}
+              </span>
+              <span>
+                <span className="block text-sm font-medium text-slate-700">
+                  {picture ? picture.name : 'Choose a picture'}
+                </span>
+                <span className="block text-xs text-slate-400 mt-1">JPG, PNG, or WebP · Max 5 MB</span>
+              </span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null
+                  if (file && file.size > 5 * 1024 * 1024) {
+                    setPicture(null)
+                    setPicturePreview(null)
+                    setError('Please choose an image smaller than 5 MB.')
+                    return
+                  }
+                  setError(null)
+                  setPicture(file)
+                  setPicturePreview(file ? URL.createObjectURL(file) : null)
+                }}
+              />
+            </label>
+          </Field>
+        )}
         <Field label="Client Name" urdu="گاہک کا نام">
           <input
             value={name}
@@ -308,9 +370,7 @@ function ClientProfileModal({
     <Modal title="Client Profile" onClose={onClose}>
       <div className="space-y-4">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-            <User className="w-6 h-6 text-primary-600" />
-          </div>
+          <ClientAvatar client={client} size="large" />
           <div>
             <h3 className="font-bold text-slate-800">{client.name}</h3>
             <p className="text-sm text-slate-400">{client.cnic ?? 'No CNIC'}</p>
@@ -347,6 +407,41 @@ function ClientProfileModal({
         </div>
       </div>
     </Modal>
+  )
+}
+
+function ClientAvatar({ client, size }: { client: Client; size: 'small' | 'large' }) {
+  const { data: picture } = useGetClientPictureQuery(client.id, { skip: !client.hasPicture })
+  const [pictureUrl, setPictureUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!picture) {
+      setPictureUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(picture)
+    setPictureUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [picture])
+
+  const dimensions = size === 'large' ? 'w-12 h-12 rounded-xl' : 'w-8 h-8 rounded-lg'
+  const iconSize = size === 'large' ? 'w-6 h-6' : 'w-4 h-4'
+
+  return (
+    <span className={`${dimensions} bg-primary-100 overflow-hidden flex items-center justify-center flex-shrink-0`}>
+      {pictureUrl ? (
+        <Image
+          src={pictureUrl}
+          alt={client.name}
+          width={size === 'large' ? 48 : 32}
+          height={size === 'large' ? 48 : 32}
+          unoptimized
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <User className={`${iconSize} text-primary-600`} />
+      )}
+    </span>
   )
 }
 
