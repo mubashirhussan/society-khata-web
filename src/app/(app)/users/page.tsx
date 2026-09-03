@@ -12,6 +12,7 @@ import { formatDate, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
 import Modal, { ModalActions, Field, inputCls } from '@/components/Modal'
+import { PasswordInput } from '@/components/FormInputs'
 
 export default function UsersPage() {
   const allowed = useRequirePermission(PERMS.usersView)
@@ -188,7 +189,15 @@ function CreateUserModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@example.com" className={inputCls} />
         </Field>
         <Field label="Password" urdu="پاس ورڈ">
-          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
+          <PasswordInput
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            className={inputCls}
+          />
         </Field>
         <Field label="Role" urdu="کردار">
           <select value={selectedRoleId} onChange={(e) => setRoleId(e.target.value)} className={inputCls}>

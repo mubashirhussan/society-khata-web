@@ -17,6 +17,7 @@ import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
 import type { Client, Property } from '@/lib/types'
 import Modal, { Field, inputCls, ModalActions } from '@/components/Modal'
+import { formatCnic, formatMobileNumber } from '@/components/FormInputs'
 
 export default function ClientsPage() {
   useRequirePermission(PERMS.propertiesView)
@@ -200,8 +201,8 @@ function ClientModal({
   const [updateClient] = useUpdateClientMutation()
   const [uploadClientPicture] = useUploadClientPictureMutation()
   const [name, setName] = useState(client?.name ?? '')
-  const [cnic, setCnic] = useState(client?.cnic ?? '')
-  const [phone, setPhone] = useState(client?.phone ?? '')
+  const [cnic, setCnic] = useState(() => formatCnic(client?.cnic ?? ''))
+  const [phone, setPhone] = useState(() => formatMobileNumber(client?.phone ?? ''))
   const [address, setAddress] = useState(client?.address ?? '')
   const [fatherHusband, setFatherHusband] = useState(client?.fatherHusband ?? '')
   const [notes, setNotes] = useState(client?.notes ?? '')
@@ -309,16 +310,23 @@ function ClientModal({
           <Field label="CNIC" urdu="شناختی کارڈ">
             <input
               value={cnic}
-              onChange={(event) => setCnic(event.target.value)}
-              placeholder="XXXXX-XXXXXXX-X"
+              onChange={(event) => setCnic(formatCnic(event.target.value))}
+              placeholder="12345-1234567-1"
+              inputMode="numeric"
+              maxLength={15}
+              autoComplete="off"
               className={inputCls}
             />
           </Field>
           <Field label="Phone" urdu="فون نمبر">
             <input
+              type="tel"
               value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="03XX-XXXXXXX"
+              onChange={(event) => setPhone(formatMobileNumber(event.target.value))}
+              placeholder="0300-1234567"
+              inputMode="numeric"
+              maxLength={12}
+              autoComplete="tel"
               className={inputCls}
             />
           </Field>
