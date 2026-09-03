@@ -21,6 +21,7 @@ import type { RootState } from '@/store'
 import { logout } from '@/store/authSlice'
 import { api } from '@/store/api'
 import { hasPermission, NAV_PERMISSIONS } from '@/lib/permissions'
+import Modal from '@/components/Modal'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', urdu: 'ڈیش بورڈ', icon: LayoutDashboard },
@@ -39,6 +40,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch()
   const user = useSelector((s: RootState) => s.auth.user)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const visibleNav = navItems.filter((item) => {
     const perm = NAV_PERMISSIONS[item.href]
@@ -48,6 +50,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     dispatch(logout())
     dispatch(api.util.resetApiState())
+    setShowLogoutConfirm(false)
     router.replace('/login')
   }
 
@@ -100,7 +103,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] text-primary-400 mt-0.5">{user?.roleName}</p>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-200 hover:bg-error-600 hover:text-white transition-all"
           >
             <LogOut className="w-4 h-4" />
@@ -132,6 +135,28 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
         <main className="p-4 lg:p-8 max-w-7xl mx-auto">{children}</main>
       </div>
+
+      {showLogoutConfirm && (
+        <Modal title="Confirm Logout" onClose={() => setShowLogoutConfirm(false)} maxWidth="max-w-sm">
+          <p className="text-sm text-slate-600">Are you sure you want to logout?</p>
+          <div className="flex gap-3 mt-6">
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirm(false)}
+              className="flex-1 border border-slate-200 text-slate-700 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-1 bg-error-600 hover:bg-error-700 text-white py-2.5 rounded-lg text-sm font-medium transition-all"
+            >
+              Logout
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
