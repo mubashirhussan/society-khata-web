@@ -13,7 +13,29 @@ export const authApi = api.injectEndpoints({
       query: () => '/auth/me',
       providesTags: ['Me'],
     }),
+    uploadTenantLogo: build.mutation<User, File>({
+      query: (logo) => {
+        const body = new FormData()
+        body.append('logo', logo)
+        return { url: '/tenants/logo', method: 'POST', body }
+      },
+      invalidatesTags: ['Me', 'TenantLogo'],
+    }),
+    getTenantLogo: build.query<Blob, void>({
+      query: () => ({
+        url: '/tenants/logo',
+        responseHandler: (response) => response.blob(),
+      }),
+      providesTags: ['TenantLogo'],
+    }),
   }),
 })
 
-export const { useLoginMutation, useRegisterMutation, useMeQuery, useLazyMeQuery } = authApi
+export const {
+  useLoginMutation,
+  useRegisterMutation,
+  useMeQuery,
+  useLazyMeQuery,
+  useUploadTenantLogoMutation,
+  useGetTenantLogoQuery,
+} = authApi

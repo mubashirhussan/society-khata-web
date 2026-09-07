@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -18,9 +19,10 @@ import {
 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '@/store'
-import { logout } from '@/store/authSlice'
+import { logout, setUser } from '@/store/authSlice'
 import { api } from '@/store/api'
-import { hasPermission, NAV_PERMISSIONS } from '@/lib/permissions'
+import { hasPermission, NAV_PERMISSIONS, PERMS } from '@/lib/permissions'
+import { useGetTenantLogoQuery, useUploadTenantLogoMutation } from '@/features/authApi'
 import Modal from '@/components/Modal'
 
 const navItems = [
@@ -41,6 +43,21 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const user = useSelector((s: RootState) => s.auth.user)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const canManageLogo = hasPermission(user?.permissions, PERMS.usersManage)
+  const logoInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploadTenantLogo, { isLoading: uploadingLogo }] = useUploadTenantLogoMutation()
+  const { data: logoBlob } = useGetTenantLogoQuery(undefined, { skip: !user?.hasLogo })
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!logoBlob) {
+      setLogoUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(logoBlob)
+    setLogoUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [logoBlob])
 
   const visibleNav = navItems.filter((item) => {
     const perm = NAV_PERMISSIONS[item.href]
@@ -54,18 +71,51 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     router.replace('/login')
   }
 
+  const handleLogoUpload = async (file: File | null) => {
+    if (!file || !canManageLogo) return
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please choose an image smaller than 5 MB.')
+      return
+    }
+    try {
+      const updatedUser = await uploadTenantLogo(file).unwrap()
+      dispatch(setUser(updatedUser))
+    } catch {
+      alert('Failed to upload logo.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-40 h-screen w-64 bg-primary-900 text-white flex flex-col transition-transform duration-300 ${
+        className={`fixed lg:sticky top-0 left-0 z-40 h-screen w-64 bg-primary-900 text-white flex flex-col transition-transform duration-300 no-print ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="p-5 border-b border-primary-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
+            <button
+              type="button"
+              onClick={() => canManageLogo && logoInputRef.current?.click()}
+              className={`w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${
+                canManageLogo ? 'hover:ring-2 hover:ring-primary-400 cursor-pointer' : ''
+              }`}
+              title={canManageLogo ? 'Change society logo' : undefined}
+              disabled={uploadingLogo}
+            >
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt={user?.tenantName || 'Society logo'}
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Building2 className="w-5 h-5 text-white" />
+              )}
+            </button>
             <div className="min-w-0">
               <h1 className="font-bold text-base truncate">
                 {user?.tenantName || 'Society Khata'}
@@ -73,6 +123,18 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
               <p className="text-xs text-primary-300">Society Khata</p>
             </div>
           </div>
+          {canManageLogo && (
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(event) => {
+                void handleLogoUpload(event.target.files?.[0] ?? null)
+                event.target.value = ''
+              }}
+            />
+          )}
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
@@ -115,7 +177,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden no-print"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -128,9 +190,21 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <span className="font-bold text-slate-800 truncate">
-            {user?.tenantName || 'Society Khata'}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            {logoUrl && (
+              <Image
+                src={logoUrl}
+                alt=""
+                width={28}
+                height={28}
+                unoptimized
+                className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
+              />
+            )}
+            <span className="font-bold text-slate-800 truncate">
+              {user?.tenantName || 'Society Khata'}
+            </span>
+          </div>
         </header>
 
         <main className="p-4 lg:p-8 max-w-7xl mx-auto">{children}</main>

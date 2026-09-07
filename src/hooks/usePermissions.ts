@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
-import { hasPermission, type PermissionKey } from '@/lib/permissions'
+import { getHomeRoute, hasPermission, type PermissionKey } from '@/lib/permissions'
 
 export function usePermissions() {
   const user = useSelector((s: RootState) => s.auth.user)
@@ -17,13 +17,16 @@ export function usePermissions() {
   }
 }
 
-export function useRequirePermission(permission: PermissionKey | string, redirectTo = '/dashboard') {
+export function useRequirePermission(permission: PermissionKey | string) {
   const router = useRouter()
-  const { user, can } = usePermissions()
+  const { user, can, permissions } = usePermissions()
+  const allowed = can(permission)
 
   useEffect(() => {
-    if (user && !can(permission)) router.replace(redirectTo)
-  }, [user, can, permission, redirectTo, router])
+    if (!user || allowed) return
+    const home = getHomeRoute(permissions)
+    if (home !== '/login') router.replace(home)
+  }, [user, allowed, permissions, router])
 
-  return can(permission)
+  return allowed
 }

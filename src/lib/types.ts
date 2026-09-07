@@ -7,6 +7,7 @@ export interface User {
   fullName: string | null
   tenantId: string
   tenantName: string
+  hasLogo?: boolean
 }
 
 export interface UserListItem {

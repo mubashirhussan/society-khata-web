@@ -5,28 +5,41 @@ import { Building2, Lock, Mail, Loader2, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '@/store'
-import { setCredentials } from '@/store/authSlice'
-import { useLoginMutation, useRegisterMutation } from '@/features/authApi'
+import { setCredentials, setUser } from '@/store/authSlice'
+import { useLoginMutation, useRegisterMutation, useUploadTenantLogoMutation } from '@/features/authApi'
 import { getApiError } from '@/lib/utils'
+import { getHomeRoute } from '@/lib/permissions'
 import { PasswordInput } from '@/components/FormInputs'
+import ImagePicker from '@/components/ImagePicker'
 
 export default function LoginPage() {
   const router = useRouter()
   const dispatch = useDispatch()
-  const { token, hydrated } = useSelector((s: RootState) => s.auth)
+  const { token, hydrated, user } = useSelector((s: RootState) => s.auth)
   const [login, { isLoading: loggingIn }] = useLoginMutation()
   const [register, { isLoading: registering }] = useRegisterMutation()
+  const [uploadTenantLogo] = useUploadTenantLogoMutation()
 
   const [isSignUp, setIsSignUp] = useState(false)
   const [tenantName, setTenantName] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [logo, setLogo] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (hydrated && token) router.replace('/dashboard')
-  }, [hydrated, token, router])
+    if (hydrated && token) {
+      router.replace(getHomeRoute(user?.permissions))
+    }
+  }, [hydrated, token, user?.permissions, router])
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview)
+    }
+  }, [logoPreview])
 
   const loading = loggingIn || registering
 
@@ -44,7 +57,19 @@ export default function LoginPage() {
         : await login({ email: email.trim(), password }).unwrap()
 
       dispatch(setCredentials(result))
-      router.replace('/dashboard')
+
+      let nextUser = result.user
+      if (isSignUp && logo) {
+        try {
+          const updatedUser = await uploadTenantLogo(logo).unwrap()
+          dispatch(setUser(updatedUser))
+          nextUser = updatedUser
+        } catch {
+          // Account created; logo can be updated later from the sidebar.
+        }
+      }
+
+      router.replace(getHomeRoute(nextUser.permissions))
     } catch (err) {
       setError(getApiError(err, isSignUp ? 'Registration failed' : 'Login failed'))
     }
@@ -73,7 +98,7 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Society Khata</h1>
             <p className="text-sm text-slate-500 mt-1">سوسائٹی کھاتہ</p>
-            <p className="text-xs text-slate-400 mt-2">Multi-tenant society account management</p>
+            {/* <p className="text-xs text-slate-400 mt-2">Multi-tenant society account management</p> */}
           </div>
 
           <div className="flex bg-slate-100 rounded-lg p-1 mb-6">
@@ -116,6 +141,20 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
+                <ImagePicker
+                  label="Society Logo (optional)"
+                  urdu="سوسائٹی لوگو"
+                  value={logo}
+                  previewUrl={logoPreview}
+                  allowCamera={false}
+                  onChange={(file, preview) => {
+                    if (logoPreview) URL.revokeObjectURL(logoPreview)
+                    setLogo(file)
+                    setLogoPreview(preview)
+                  }}
+                  onError={(message) => setError(message || null)}
+                  hint="Shown in the sidebar · JPG, PNG, WebP · Max 5 MB"
+                />
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Full Name <span className="font-urdu">نام</span>

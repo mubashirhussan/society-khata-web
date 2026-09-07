@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { Building2, Edit2, ImagePlus, MapPin, Phone, Plus, Search, Trash2, User } from 'lucide-react'
+import Link from 'next/link'
+import { Edit2, MapPin, Phone, Plus, Search, Trash2, User } from 'lucide-react'
 import {
   useCreateClientMutation,
   useDeleteClientMutation,
@@ -11,13 +12,13 @@ import {
   useUploadClientPictureMutation,
   useUpdateClientMutation,
 } from '@/features/clientsApi'
-import { useGetPropertiesQuery } from '@/features/propertiesApi'
-import { getApiError, formatPKR } from '@/lib/utils'
+import { getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
-import type { Client, Property } from '@/lib/types'
+import type { Client } from '@/lib/types'
 import Modal, { Field, inputCls, ModalActions } from '@/components/Modal'
 import { formatCnic, formatMobileNumber } from '@/components/FormInputs'
+import ImagePicker from '@/components/ImagePicker'
 
 export default function ClientsPage() {
   useRequirePermission(PERMS.propertiesView)
@@ -28,13 +29,11 @@ export default function ClientsPage() {
   const canManage = canCreate || canEdit || canDelete
 
   const { data: clients = [], isLoading } = useGetClientsQuery()
-  const { data: properties = [] } = useGetPropertiesQuery()
   const [deleteClient] = useDeleteClientMutation()
 
   const [search, setSearch] = useState('')
   const [showClientModal, setShowClientModal] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   const filtered = clients.filter((client) => {
     const query = search.toLowerCase()
@@ -99,8 +98,8 @@ export default function ClientsPage() {
               className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
-                <button
-                  onClick={() => setSelectedClient(client)}
+                <Link
+                  href={`/clients/${client.id}`}
                   className="flex items-center gap-2 text-left min-w-0"
                 >
                   <ClientAvatar client={client} size="small" />
@@ -110,7 +109,7 @@ export default function ClientsPage() {
                     </span>
                     <span className="block text-xs text-slate-400">{client.cnic ?? 'No CNIC'}</span>
                   </span>
-                </button>
+                </Link>
                 {(canEdit || canDelete) && (
                   <div className="flex gap-1">
                     {canEdit && (
@@ -158,12 +157,12 @@ export default function ClientsPage() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => setSelectedClient(client)}
-                className="mt-4 text-xs font-medium text-primary-600 hover:underline"
+              <Link
+                href={`/clients/${client.id}`}
+                className="mt-4 inline-block text-xs font-medium text-primary-600 hover:underline"
               >
                 View profile
-              </button>
+              </Link>
             </div>
           ))}
         </div>
@@ -174,14 +173,6 @@ export default function ClientsPage() {
           client={editingClient}
           onClose={() => setShowClientModal(false)}
           onSaved={() => setShowClientModal(false)}
-        />
-      )}
-
-      {selectedClient && (
-        <ClientProfileModal
-          client={selectedClient}
-          properties={properties.filter((property) => property.clientId === selectedClient.id)}
-          onClose={() => setSelectedClient(null)}
         />
       )}
     </div>
@@ -233,6 +224,9 @@ function ClientModal({
     try {
       if (client) {
         await updateClient({ id: client.id, body }).unwrap()
+        if (picture) {
+          await uploadClientPicture({ id: client.id, picture }).unwrap()
+        }
       } else {
         let clientId = createdClientId
         if (!clientId) {
@@ -255,49 +249,19 @@ function ClientModal({
   return (
     <Modal title={client ? 'Edit Client' : 'New Client'} onClose={onClose}>
       <div className="space-y-4">
-        {!client && (
-          <Field label="Client Picture (optional)" urdu="گاہک کی تصویر">
-            <label className="flex items-center gap-4 rounded-lg border border-dashed border-slate-300 p-3 cursor-pointer hover:border-primary-400 transition-colors">
-              <span className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0">
-                {picturePreview ? (
-                  <Image
-                    src={picturePreview}
-                    alt="Client preview"
-                    width={64}
-                    height={64}
-                    unoptimized
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <ImagePlus className="w-6 h-6 text-slate-400" />
-                )}
-              </span>
-              <span>
-                <span className="block text-sm font-medium text-slate-700">
-                  {picture ? picture.name : 'Choose a picture'}
-                </span>
-                <span className="block text-xs text-slate-400 mt-1">JPG, PNG, or WebP · Max 5 MB</span>
-              </span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null
-                  if (file && file.size > 5 * 1024 * 1024) {
-                    setPicture(null)
-                    setPicturePreview(null)
-                    setError('Please choose an image smaller than 5 MB.')
-                    return
-                  }
-                  setError(null)
-                  setPicture(file)
-                  setPicturePreview(file ? URL.createObjectURL(file) : null)
-                }}
-              />
-            </label>
-          </Field>
-        )}
+        <ImagePicker
+          label="Client Picture (optional)"
+          urdu="گاہک کی تصویر"
+          value={picture}
+          previewUrl={picturePreview}
+          onChange={(file, preview) => {
+            if (picturePreview) URL.revokeObjectURL(picturePreview)
+            setPicture(file)
+            setPicturePreview(preview)
+            setError(null)
+          }}
+          onError={(message) => setError(message || null)}
+        />
         <Field label="Client Name" urdu="گاہک کا نام">
           <input
             value={name}
@@ -365,59 +329,6 @@ function ClientModal({
   )
 }
 
-function ClientProfileModal({
-  client,
-  properties,
-  onClose,
-}: {
-  client: Client
-  properties: Property[]
-  onClose: () => void
-}) {
-  return (
-    <Modal title="Client Profile" onClose={onClose}>
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <ClientAvatar client={client} size="large" />
-          <div>
-            <h3 className="font-bold text-slate-800">{client.name}</h3>
-            <p className="text-sm text-slate-400">{client.cnic ?? 'No CNIC'}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {client.phone && <InfoItem icon={Phone} label="Phone" value={client.phone} />}
-          {client.fatherHusband && <InfoItem icon={User} label="Father/Husband" value={client.fatherHusband} />}
-          {client.address && <InfoItem icon={MapPin} label="Address" value={client.address} />}
-        </div>
-        <div>
-          <h4 className="text-sm font-semibold text-slate-700 mb-2">
-            Assigned Properties <span className="font-urdu text-slate-400">مختص جائیداد</span>
-          </h4>
-          {properties.length === 0 ? (
-            <p className="text-sm text-slate-400">No properties assigned.</p>
-          ) : (
-            <div className="space-y-2">
-              {properties.map((property) => (
-                <div
-                  key={property.id}
-                  className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm font-medium text-slate-700">{property.propertyNumber}</span>
-                    <span className="text-xs text-slate-400">({property.propertyType})</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-700">Rs {formatPKR(property.totalPrice)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
 function ClientAvatar({ client, size }: { client: Client; size: 'small' | 'large' }) {
   const { data: picture } = useGetClientPictureQuery(client.id, { skip: !client.hasPicture })
   const [pictureUrl, setPictureUrl] = useState<string | null>(null)
@@ -450,25 +361,5 @@ function ClientAvatar({ client, size }: { client: Client; size: 'small' | 'large
         <User className={`${iconSize} text-primary-600`} />
       )}
     </span>
-  )
-}
-
-function InfoItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Phone
-  label: string
-  value: string
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="w-4 h-4 text-slate-400 mt-0.5" />
-      <div>
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="text-sm text-slate-700">{value}</p>
-      </div>
-    </div>
   )
 }

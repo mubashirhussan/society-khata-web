@@ -324,6 +324,10 @@ function PaymentModal({
       setError('Payment amount must be greater than zero.')
       return
     }
+    if (due && enteredAmount > due.amount) {
+      setError(`Amount cannot exceed the remaining installment of Rs ${formatPKR(due.amount)}.`)
+      return
+    }
     const isNewPlan = !payment && !due && paymentMethod === 'installment'
       && existingPlan.length === 0 && scheduleTarget > 0
     if (!payment && !due && existingPlan.length > 0) {
@@ -478,24 +482,32 @@ function PaymentModal({
           {(paymentMethod === 'full' || payment || due) && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              {due ? 'Installment Amount' : 'Amount'} (Rs.){' '}
+              Amount (Rs.){' '}
               <span className="font-urdu text-xs text-slate-400">رقم</span>
             </label>
             <input
               type="number"
               value={paymentMethod === 'full' ? remainingBalance : amount}
               onChange={(e) => setAmount(e.target.value)}
-              readOnly={paymentMethod === 'full' || lockedToInstallment}
+              readOnly={paymentMethod === 'full'}
+              max={due ? due.amount : undefined}
               placeholder="0"
               className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                paymentMethod === 'full' || lockedToInstallment ? 'bg-slate-50 text-slate-600' : ''
+                paymentMethod === 'full' ? 'bg-slate-50 text-slate-600' : ''
               }`}
             />
-            {selectedProperty && (
+            {due ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Installment due: Rs {formatPKR(due.amount)}
+                {enteredAmount > 0 && enteredAmount < due.amount
+                  ? ` · Remaining after this payment: Rs ${formatPKR(due.amount - enteredAmount)}`
+                  : ' · Full or partial amount allowed'}
+              </p>
+            ) : selectedProperty ? (
               <p className="mt-1 text-xs text-slate-500">
                 Remaining balance: Rs {formatPKR(remainingBalance)}
               </p>
-            )}
+            ) : null}
           </div>
           )}
           {!payment && paymentMethod === 'installment' && selectedProperty && (
@@ -504,7 +516,8 @@ function PaymentModal({
 
               {due ? (
                 <p className="text-sm text-slate-600">
-                  Receiving scheduled installment due {formatDate(due.date)}.
+                  Receiving scheduled installment due {formatDate(due.date)}. You can enter a partial amount;
+                  any unpaid balance stays pending.
                 </p>
               ) : existingPlan.length > 0 ? (
                 <div className="space-y-2">

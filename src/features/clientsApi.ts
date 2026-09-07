@@ -28,6 +28,7 @@ export const clientsApi = api.injectEndpoints({
         url: `/clients/${id}/picture`,
         responseHandler: (response) => response.blob(),
       }),
+      providesTags: (_result, _error, id) => [{ type: 'Clients', id: `picture-${id}` }],
     }),
     deleteClient: build.mutation<void, string>({
       query: (id) => ({ url: `/clients/${id}`, method: 'DELETE' }),

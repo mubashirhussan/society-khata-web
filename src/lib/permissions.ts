@@ -44,3 +44,23 @@ export const NAV_PERMISSIONS: Record<string, PermissionKey> = {
   '/users': PERMS.usersView,
   '/roles': PERMS.rolesManage,
 }
+
+const HOME_ROUTE_ORDER = [
+  '/dashboard',
+  '/properties',
+  '/clients',
+  '/payments',
+  '/expenses',
+  '/reports',
+  '/users',
+  '/roles',
+] as const
+
+/** First sidebar route the user is allowed to open. */
+export function getHomeRoute(permissions: string[] | undefined): string {
+  for (const href of HOME_ROUTE_ORDER) {
+    const perm = NAV_PERMISSIONS[href]
+    if (perm && hasPermission(permissions, perm)) return href
+  }
+  return '/login'
+}

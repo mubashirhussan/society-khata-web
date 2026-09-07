@@ -63,6 +63,34 @@ export default function ClientPaymentDetailsPage() {
     })
     .filter((balance) => balance.amount > 0)
   const pendingInstallments = [...scheduledInstallments, ...unscheduledBalances]
+  const pendingByPlot = Array.from(
+    pendingInstallments.reduce((groups, installment) => {
+      const propertyId = installment.property?.id ?? installment.propertyId ?? 'unknown'
+      const label = installment.property?.propertyNumber
+        ?? (propertyId === 'unknown' ? 'Unassigned' : propertyId)
+      const existing = groups.get(propertyId)
+      if (existing) {
+        existing.items.push(installment)
+        existing.total += installment.amount
+      } else {
+        groups.set(propertyId, {
+          propertyId,
+          label,
+          propertyType: installment.property?.propertyType ?? null,
+          items: [installment],
+          total: installment.amount,
+        })
+      }
+      return groups
+    }, new Map<string, {
+      propertyId: string
+      label: string
+      propertyType: string | null
+      items: typeof pendingInstallments
+      total: number
+    }>())
+  ).map(([, group]) => group)
+    .sort((a, b) => a.label.localeCompare(b.label))
   const client = clients.find((item) => item.id === params.clientId)
     ?? clientPayments[0]?.client
     ?? scheduledInstallments[0]?.client
@@ -191,29 +219,46 @@ export default function ClientPaymentDetailsPage() {
         ])}
       />
 
-      <PaymentTable
-        title="Pending Installments"
-        emptyText="No pending installments."
-        loading={isLoading}
-        headers={['Due Date', 'Property', 'Amount', 'Status']}
-        rows={pendingInstallments.map((installment) => [
-          installment.date ? formatDate(installment.date) : 'Not scheduled',
-          installment.property?.propertyNumber ?? '-',
-          <span key="amount" className="font-bold text-amber-600">
-            Rs {formatPKR(installment.amount)}
-          </span>,
-          <span
-            key="status"
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
-              installment.status === 'overdue'
-                ? 'bg-error-50 text-error-700'
-                : 'bg-amber-50 text-amber-700'
-            }`}
-          >
-            {installment.status}
-          </span>,
-        ])}
-      />
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-slate-800">
+          Pending Installments <span className="font-urdu text-sm font-normal text-slate-400">بقایا اقساط</span>
+        </h3>
+        {isLoading ? (
+          <div className="rounded-xl border border-slate-100 bg-white p-8 text-center text-sm text-slate-400 shadow-sm">
+            Loading...
+          </div>
+        ) : pendingByPlot.length === 0 ? (
+          <div className="rounded-xl border border-slate-100 bg-white p-8 text-center text-sm text-slate-400 shadow-sm">
+            No pending installments.
+          </div>
+        ) : (
+          pendingByPlot.map((plot) => (
+            <PaymentTable
+              key={plot.propertyId}
+              title={`${plot.label}${plot.propertyType ? ` (${plot.propertyType})` : ''} — Pending Rs ${formatPKR(plot.total)}`}
+              emptyText="No pending installments."
+              loading={false}
+              headers={['Due Date', 'Amount', 'Status']}
+              rows={plot.items.map((installment) => [
+                installment.date ? formatDate(installment.date) : 'Not scheduled',
+                <span key="amount" className="font-bold text-amber-600">
+                  Rs {formatPKR(installment.amount)}
+                </span>,
+                <span
+                  key="status"
+                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                    installment.status === 'overdue'
+                      ? 'bg-error-50 text-error-700'
+                      : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  {installment.status}
+                </span>,
+              ])}
+            />
+          ))
+        )}
+      </div>
 
       {editingPayment && (
         <EditReceiptModal
@@ -292,6 +337,8 @@ function ReceivePaymentModal({
   const propertyDues = scheduledInstallments.filter((item) => item.propertyId === propertyId)
   const selectedDue = propertyDues.find((item) => item.id === installmentDueId)
 
+  const dueRemaining = selectedDue?.amount ?? 0
+
   const save = async () => {
     const parsedAmount = Number(amount)
     if (!propertyId || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
@@ -300,6 +347,10 @@ function ReceivePaymentModal({
     }
     if (propertyDues.length > 0 && !selectedDue) {
       setError('Select the installment being received.')
+      return
+    }
+    if (selectedDue && parsedAmount > dueRemaining) {
+      setError(`Amount cannot exceed the remaining installment of Rs ${formatPKR(dueRemaining)}.`)
       return
     }
     setSaving(true)
@@ -390,13 +441,19 @@ function ReceivePaymentModal({
             <input
               type="number"
               min="1"
-              readOnly={Boolean(selectedDue)}
+              max={selectedDue ? dueRemaining : undefined}
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                selectedDue ? 'bg-slate-50 text-slate-600' : ''
-              }`}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
+            {selectedDue && (
+              <p className="mt-1 text-xs text-slate-500">
+                Due Rs {formatPKR(dueRemaining)}
+                {Number(amount) > 0 && Number(amount) < dueRemaining
+                  ? ` · Remaining after this payment: Rs ${formatPKR(dueRemaining - Number(amount))}`
+                  : ' · Full or partial amount allowed'}
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Notes</label>

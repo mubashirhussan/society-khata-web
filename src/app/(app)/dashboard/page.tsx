@@ -17,9 +17,17 @@ import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
 
 export default function DashboardPage() {
-  useRequirePermission(PERMS.dashboardView)
+  const allowed = useRequirePermission(PERMS.dashboardView)
   const { user, can } = usePermissions()
-  const { data: stats, isLoading: loading } = useGetDashboardStatsQuery()
+  const { data: stats, isLoading: loading } = useGetDashboardStatsQuery(undefined, { skip: !allowed })
+
+  if (!allowed) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center text-slate-400 text-sm">
+        Redirecting...
+      </div>
+    )
+  }
 
   const s = stats ?? {
     totalPlots: 0,
