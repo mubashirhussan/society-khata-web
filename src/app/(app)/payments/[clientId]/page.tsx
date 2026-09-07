@@ -55,7 +55,8 @@ export default function ClientPaymentDetailsPage() {
         .reduce((sum, payment) => sum + payment.amount, 0)
       return {
         id: `balance-${propertyId}`,
-        date: null,
+        date: null as string | null,
+        propertyId,
         property,
         amount: Math.max(0, (property?.totalPrice ?? paid) - paid),
         status: 'pending' as const,
