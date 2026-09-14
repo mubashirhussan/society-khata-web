@@ -98,7 +98,6 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Society Khata</h1>
             <p className="text-sm text-slate-500 mt-1">سوسائٹی کھاتہ</p>
-            {/* <p className="text-xs text-slate-400 mt-2">Multi-tenant society account management</p> */}
           </div>
 
           <div className="flex bg-slate-100 rounded-lg p-1 mb-6">
@@ -124,9 +123,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
-              <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     Society Name <span className="font-urdu">سوسائٹی کا نام</span>
                   </label>
                   <div className="relative">
@@ -137,26 +136,12 @@ export default function LoginPage() {
                       value={tenantName}
                       onChange={(e) => setTenantName(e.target.value)}
                       placeholder="e.g. Azlan City"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
-                <ImagePicker
-                  label="Society Logo (optional)"
-                  urdu="سوسائٹی لوگو"
-                  value={logo}
-                  previewUrl={logoPreview}
-                  allowCamera={false}
-                  onChange={(file, preview) => {
-                    if (logoPreview) URL.revokeObjectURL(logoPreview)
-                    setLogo(file)
-                    setLogoPreview(preview)
-                  }}
-                  onError={(message) => setError(message || null)}
-                  hint="Shown in the sidebar · JPG, PNG, WebP · Max 5 MB"
-                />
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     Full Name <span className="font-urdu">نام</span>
                   </label>
                   <div className="relative">
@@ -166,11 +151,27 @@ export default function LoginPage() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Your name"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
-              </>
+                <div className="sm:col-span-2">
+                  <ImagePicker
+                    label="Society Logo (optional)"
+                    urdu="سوسائٹی لوگو"
+                    value={logo}
+                    previewUrl={logoPreview}
+                    allowCamera={false}
+                    onChange={(file, preview) => {
+                      if (logoPreview) URL.revokeObjectURL(logoPreview)
+                      setLogo(file)
+                      setLogoPreview(preview)
+                    }}
+                    onError={(message) => setError(message || null)}
+                    hint="Shown in the sidebar · JPG, PNG, WebP · Max 5 MB"
+                  />
+                </div>
+              </div>
             )}
 
             <div>
