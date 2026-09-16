@@ -57,7 +57,8 @@ const HOME_ROUTE_ORDER = [
 ] as const
 
 /** First sidebar route the user is allowed to open. */
-export function getHomeRoute(permissions: string[] | undefined): string {
+export function getHomeRoute(permissions: string[] | undefined, isPlatformManager?: boolean): string {
+  if (isPlatformManager) return '/platform/societies'
   for (const href of HOME_ROUTE_ORDER) {
     const perm = NAV_PERMISSIONS[href]
     if (perm && hasPermission(permissions, perm)) return href

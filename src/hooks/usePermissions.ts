@@ -24,7 +24,7 @@ export function useRequirePermission(permission: PermissionKey | string) {
 
   useEffect(() => {
     if (!user || allowed) return
-    const home = getHomeRoute(permissions)
+    const home = getHomeRoute(permissions, user.isPlatformManager)
     if (home !== '/login') router.replace(home)
   }, [user, allowed, permissions, router])
 

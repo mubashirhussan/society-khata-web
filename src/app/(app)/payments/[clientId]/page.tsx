@@ -12,6 +12,7 @@ import {
   useUpdatePaymentMutation,
 } from '@/features/paymentsApi'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useConfirm } from '@/hooks/useConfirm'
 import { PERMS } from '@/lib/permissions'
 import { formatDate, formatPKR, getApiError, numberToWords } from '@/lib/utils'
 import type { Payment, PaymentLedgerRow, PaymentRequest, Property } from '@/lib/types'
@@ -25,6 +26,7 @@ export default function ClientPaymentDetailsPage() {
   const { data: payments = [], isLoading: paymentsLoading } = useGetPaymentsQuery()
   const { data: ledger = [], isLoading: ledgerLoading } = useGetPaymentLedgerQuery()
   const [deletePayment] = useDeletePaymentMutation()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
   const [printPayment, setPrintPayment] = useState<Payment | null>(null)
   const [showReceiveModal, setShowReceiveModal] = useState(false)
@@ -205,7 +207,7 @@ export default function ClientPaymentDetailsPage() {
             {can(PERMS.paymentsDelete) && (
               <button
                 onClick={async () => {
-                  if (confirm(`Delete receipt ${payment.receiptNo ?? ''}?`)) {
+                  if (await confirm(`Delete receipt ${payment.receiptNo ?? ''}?`)) {
                     const result = await deletePayment(payment.id)
                     if ('error' in result) alert(getApiError(result.error))
                   }
@@ -285,6 +287,7 @@ export default function ClientPaymentDetailsPage() {
           onClose={() => setShowReceiveModal(false)}
         />
       )}
+      {ConfirmDialog}
     </div>
   )
 }
@@ -563,9 +566,18 @@ function EditReceiptModal({
               type="number"
               min="1"
               value={amount}
+              readOnly={payment.amountLocked}
               onChange={(event) => setAmount(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                payment.amountLocked ? 'bg-slate-50 text-slate-600' : ''
+              }`}
             />
+            {payment.amountLocked && (
+              <p className="mt-1 text-xs text-slate-500">
+                This receipt is part of an installment plan, so the amount is fixed. Only the receipt number,
+                date, and notes can be changed.
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Notes</label>

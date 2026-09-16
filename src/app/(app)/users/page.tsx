@@ -11,6 +11,7 @@ import { useGetAssignableRolesQuery } from '@/features/rolesApi'
 import { formatDate, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useConfirm } from '@/hooks/useConfirm'
 import Modal, { ModalActions, Field, inputCls } from '@/components/Modal'
 import { PasswordInput } from '@/components/FormInputs'
 
@@ -22,6 +23,7 @@ export default function UsersPage() {
   const { data: users = [], isLoading: loading } = useGetUsersQuery(undefined, { skip: !allowed })
   const [deleteUser] = useDeleteUserMutation()
   const [showModal, setShowModal] = useState(false)
+  const { confirm, ConfirmDialog } = useConfirm()
 
   if (!allowed) {
     return (
@@ -110,7 +112,7 @@ export default function UsersPage() {
                         <div className="flex items-center justify-end">
                           <button
                             onClick={async () => {
-                              if (confirm(`Delete user ${u.email}?`)) {
+                              if (await confirm(`Delete user ${u.email}?`)) {
                                 try {
                                   await deleteUser(u.id).unwrap()
                                 } catch (err) {
@@ -137,6 +139,7 @@ export default function UsersPage() {
       {showModal && canManage && (
         <CreateUserModal onClose={() => setShowModal(false)} onSaved={() => setShowModal(false)} />
       )}
+      {ConfirmDialog}
     </div>
   )
 }

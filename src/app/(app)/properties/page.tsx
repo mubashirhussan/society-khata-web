@@ -11,6 +11,7 @@ import {
 import { formatPKR, formatDate, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useConfirm } from '@/hooks/useConfirm'
 import type { Property } from '@/lib/types'
 import Modal, { ModalActions, Field, inputCls } from '@/components/Modal'
 
@@ -23,6 +24,7 @@ export default function PropertiesPage() {
   const canManage = canCreate || canEdit || canDelete
   const { data: properties = [], isLoading: loadingProps } = useGetPropertiesQuery()
   const [deleteProperty] = useDeletePropertyMutation()
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const [search, setSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -150,7 +152,7 @@ export default function PropertiesPage() {
                           {canDelete && (
                             <button
                               onClick={async () => {
-                                if (confirm(`Delete property ${p.propertyNumber}?`)) {
+                                if (await confirm(`Delete property ${p.propertyNumber}?`)) {
                                   await deleteProperty(p.id)
                                 }
                               }}
@@ -178,6 +180,7 @@ export default function PropertiesPage() {
           onSaved={() => setShowAddModal(false)}
         />
       )}
+      {ConfirmDialog}
     </div>
   )
 }

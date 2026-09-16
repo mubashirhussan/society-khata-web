@@ -15,6 +15,7 @@ import {
 import { getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useConfirm } from '@/hooks/useConfirm'
 import type { Client } from '@/lib/types'
 import Modal, { Field, inputCls, ModalActions } from '@/components/Modal'
 import { formatCnic, formatMobileNumber } from '@/components/FormInputs'
@@ -30,6 +31,7 @@ export default function ClientsPage() {
 
   const { data: clients = [], isLoading } = useGetClientsQuery()
   const [deleteClient] = useDeleteClientMutation()
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const [search, setSearch] = useState('')
   const [showClientModal, setShowClientModal] = useState(false)
@@ -127,7 +129,7 @@ export default function ClientsPage() {
                     {canDelete && (
                       <button
                         onClick={async () => {
-                          if (confirm(`Delete client ${client.name}?`)) {
+                          if (await confirm(`Delete client ${client.name}?`)) {
                             await deleteClient(client.id)
                           }
                         }}
@@ -175,6 +177,7 @@ export default function ClientsPage() {
           onSaved={() => setShowClientModal(false)}
         />
       )}
+      {ConfirmDialog}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
 import { formatPKR, formatDate, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useConfirm } from '@/hooks/useConfirm'
 import type { Expense } from '@/lib/types'
 
 export default function ExpensesPage() {
@@ -21,6 +22,7 @@ export default function ExpensesPage() {
   const canDelete = can(PERMS.expensesDelete)
   const { data: expenses = [], isLoading: loading } = useGetExpensesQuery()
   const [deleteExpense] = useDeleteExpenseMutation()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
@@ -118,7 +120,7 @@ export default function ExpensesPage() {
                         {canDelete && (
                           <button
                             onClick={async () => {
-                              if (confirm(`Delete expense ${formatPKR(e.amount)}?`)) {
+                              if (await confirm(`Delete expense ${formatPKR(e.amount)}?`)) {
                                 await deleteExpense(e.id)
                               }
                             }}
@@ -145,6 +147,7 @@ export default function ExpensesPage() {
           onSaved={() => setShowModal(false)}
         />
       )}
+      {ConfirmDialog}
     </div>
   )
 }

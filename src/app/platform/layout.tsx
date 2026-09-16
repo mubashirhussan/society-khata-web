@@ -6,9 +6,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '@/store'
 import { logout, setUser } from '@/store/authSlice'
 import { useLazyMeQuery } from '@/features/authApi'
-import Sidebar from '@/components/Sidebar'
+import { getHomeRoute } from '@/lib/permissions'
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const dispatch = useDispatch()
   const { token, hydrated, user } = useSelector((s: RootState) => s.auth)
@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .unwrap()
       .then((me) => {
         dispatch(setUser(me))
-        if (me.isPlatformManager) router.replace('/platform/societies')
+        if (!me.isPlatformManager) router.replace(getHomeRoute(me.permissions))
       })
       .catch(() => {
         dispatch(logout())
@@ -34,12 +34,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [hydrated, token, fetchMe, dispatch, router])
 
   useEffect(() => {
-    if (hydrated && user?.isPlatformManager) {
-      router.replace('/platform/societies')
+    if (hydrated && user && !user.isPlatformManager) {
+      router.replace(getHomeRoute(user.permissions))
     }
   }, [hydrated, user, router])
 
-  if (!hydrated || !token || !user || user.isPlatformManager) {
+  if (!hydrated || !token || !user || !user.isPlatformManager) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-slate-400 text-sm">Loading...</div>
@@ -47,5 +47,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     )
   }
 
-  return <Sidebar>{children}</Sidebar>
+  return <div className="min-h-screen bg-slate-50">{children}</div>
 }

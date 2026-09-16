@@ -31,9 +31,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (hydrated && token) {
-      router.replace(getHomeRoute(user?.permissions))
+      router.replace(getHomeRoute(user?.permissions, user?.isPlatformManager))
     }
-  }, [hydrated, token, user?.permissions, router])
+  }, [hydrated, token, user?.permissions, user?.isPlatformManager, router])
 
   useEffect(() => {
     return () => {
@@ -69,7 +69,7 @@ export default function LoginPage() {
         }
       }
 
-      router.replace(getHomeRoute(nextUser.permissions))
+      router.replace(getHomeRoute(nextUser.permissions, nextUser.isPlatformManager))
     } catch (err) {
       setError(getApiError(err, isSignUp ? 'Registration failed' : 'Login failed'))
     }

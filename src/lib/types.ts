@@ -8,6 +8,7 @@ export interface User {
   tenantId: string
   tenantName: string
   hasLogo?: boolean
+  isPlatformManager?: boolean
 }
 
 export interface UserListItem {
@@ -100,6 +101,7 @@ export interface Payment {
   createdAt: string
   client?: Client | null
   property?: Property | null
+  amountLocked?: boolean
 }
 
 export interface PaymentRequest {
@@ -183,4 +185,17 @@ export interface CreateUserRequest {
   password: string
   roleId: string
   fullName?: string
+}
+
+export interface SocietyOverview {
+  id: string
+  name: string
+  phone: string | null
+  createdAt: string
+  userCount: number
+}
+
+export interface SocietiesOverview {
+  totalCount: number
+  societies: SocietyOverview[]
 }
