@@ -51,6 +51,7 @@ export interface Client {
   phone: string | null
   address: string | null
   fatherHusband: string | null
+  caste: string | null
   notes: string | null
   hasPicture: boolean
   createdAt: string
@@ -62,6 +63,7 @@ export interface ClientRequest {
   phone?: string | null
   address?: string | null
   fatherHusband?: string | null
+  caste?: string | null
   notes?: string | null
 }
 
@@ -70,6 +72,8 @@ export interface Property {
   propertyNumber: string
   propertyType: string
   marla: number | null
+  lengthFeet: number | null
+  widthFeet: number | null
   totalPrice: number
   bookingDate: string | null
   status: string
@@ -83,6 +87,8 @@ export interface PropertyRequest {
   propertyNumber: string
   propertyType: string
   marla?: number | null
+  lengthFeet?: number | null
+  widthFeet?: number | null
   totalPrice: number
   bookingDate?: string | null
   status: string
@@ -101,7 +107,6 @@ export interface Payment {
   createdAt: string
   client?: Client | null
   property?: Property | null
-  amountLocked?: boolean
 }
 
 export interface PaymentRequest {

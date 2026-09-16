@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Edit2, MapPin, Phone, Plus, Search, Trash2, User } from 'lucide-react'
+import { Edit2, MapPin, Phone, Plus, Search, Trash2, User, Users } from 'lucide-react'
 import {
   useCreateClientMutation,
   useDeleteClientMutation,
@@ -44,7 +44,8 @@ export default function ClientsPage() {
       client.cnic?.toLowerCase().includes(query) ||
       client.phone?.toLowerCase().includes(query) ||
       client.address?.toLowerCase().includes(query) ||
-      client.fatherHusband?.toLowerCase().includes(query)
+      client.fatherHusband?.toLowerCase().includes(query) ||
+      client.caste?.toLowerCase().includes(query)
     )
   })
 
@@ -158,6 +159,11 @@ export default function ClientsPage() {
                     <User className="w-3 h-3" /> {client.fatherHusband}
                   </p>
                 )}
+                {client.caste && (
+                  <p className="flex items-center gap-1.5">
+                    <Users className="w-3 h-3" /> {client.caste}
+                  </p>
+                )}
               </div>
               <Link
                 href={`/clients/${client.id}`}
@@ -199,6 +205,7 @@ function ClientModal({
   const [phone, setPhone] = useState(() => formatMobileNumber(client?.phone ?? ''))
   const [address, setAddress] = useState(client?.address ?? '')
   const [fatherHusband, setFatherHusband] = useState(client?.fatherHusband ?? '')
+  const [caste, setCaste] = useState(client?.caste ?? '')
   const [notes, setNotes] = useState(client?.notes ?? '')
   const [picture, setPicture] = useState<File | null>(null)
   const [picturePreview, setPicturePreview] = useState<string | null>(null)
@@ -222,6 +229,7 @@ function ClientModal({
       phone: phone || null,
       address: address || null,
       fatherHusband: fatherHusband || null,
+      caste: caste || null,
       notes: notes || null,
     }
     try {
@@ -298,13 +306,22 @@ function ClientModal({
             />
           </Field>
         </div>
-        <Field label="Father / Husband" urdu="والد / شوہر کا نام">
-          <input
-            value={fatherHusband}
-            onChange={(event) => setFatherHusband(event.target.value)}
-            className={inputCls}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Father / Husband" urdu="والد / شوہر کا نام">
+            <input
+              value={fatherHusband}
+              onChange={(event) => setFatherHusband(event.target.value)}
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Caste" urdu="ذات">
+            <input
+              value={caste}
+              onChange={(event) => setCaste(event.target.value)}
+              className={inputCls}
+            />
+          </Field>
+        </div>
         <Field label="Address" urdu="پتہ">
           <textarea
             value={address}

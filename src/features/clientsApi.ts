@@ -32,7 +32,7 @@ export const clientsApi = api.injectEndpoints({
     }),
     deleteClient: build.mutation<void, string>({
       query: (id) => ({ url: `/clients/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Clients', 'Properties', 'Dashboard'],
+      invalidatesTags: ['Clients', 'Properties', 'Payments', 'Dashboard'],
     }),
   }),
 })

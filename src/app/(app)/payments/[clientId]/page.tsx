@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, CalendarClock, CalendarRange, Edit2, Printer, Trash2, Wallet, X } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CalendarRange, Edit2, Landmark, Printer, Trash2, Wallet, X } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useGetClientsQuery } from '@/features/clientsApi'
 import {
@@ -99,6 +99,14 @@ export default function ClientPaymentDetailsPage() {
     ?? scheduledInstallments[0]?.client
   const totalReceived = clientPayments.reduce((sum, payment) => sum + payment.amount, 0)
   const totalPending = pendingInstallments.reduce((sum, installment) => sum + installment.amount, 0)
+  const clientPropertyTotals = new Map<string, number>()
+  for (const payment of clientPayments) {
+    if (payment.property) clientPropertyTotals.set(payment.property.id, payment.property.totalPrice)
+  }
+  for (const installment of pendingInstallments) {
+    if (installment.property) clientPropertyTotals.set(installment.property.id, installment.property.totalPrice)
+  }
+  const totalAmount = Array.from(clientPropertyTotals.values()).reduce((sum, price) => sum + price, 0)
   const storedPlans = Array.from(new Set(
     scheduledInstallments
       .map((item) => item.planFrequency)
@@ -150,7 +158,13 @@ export default function ClientPaymentDetailsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryCard
+          label="Total Amount"
+          amount={totalAmount}
+          color="primary"
+          icon={<Landmark className="h-6 w-6" />}
+        />
         <SummaryCard
           label="Total Received"
           amount={totalReceived}
@@ -241,8 +255,9 @@ export default function ClientPaymentDetailsPage() {
               title={`${plot.label}${plot.propertyType ? ` (${plot.propertyType})` : ''} — Pending Rs ${formatPKR(plot.total)}`}
               emptyText="No pending installments."
               loading={false}
-              headers={['Due Date', 'Amount', 'Status']}
-              rows={plot.items.map((installment) => [
+              headers={['#', 'Due Date', 'Amount', 'Status']}
+              rows={plot.items.map((installment, index) => [
+                index + 1,
                 installment.date ? formatDate(installment.date) : 'Not scheduled',
                 <span key="amount" className="font-bold text-amber-600">
                   Rs {formatPKR(installment.amount)}
@@ -353,10 +368,6 @@ function ReceivePaymentModal({
       setError('Select the installment being received.')
       return
     }
-    if (selectedDue && parsedAmount > dueRemaining) {
-      setError(`Amount cannot exceed the remaining installment of Rs ${formatPKR(dueRemaining)}.`)
-      return
-    }
     setSaving(true)
     setError(null)
     try {
@@ -445,7 +456,6 @@ function ReceivePaymentModal({
             <input
               type="number"
               min="1"
-              max={selectedDue ? dueRemaining : undefined}
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -455,7 +465,9 @@ function ReceivePaymentModal({
                 Due Rs {formatPKR(dueRemaining)}
                 {Number(amount) > 0 && Number(amount) < dueRemaining
                   ? ` · Remaining after this payment: Rs ${formatPKR(dueRemaining - Number(amount))}`
-                  : ' · Full or partial amount allowed'}
+                  : Number(amount) > dueRemaining
+                    ? ' · Extra amount will be applied to the next pending installments'
+                    : ' · Full or partial amount allowed'}
               </p>
             )}
           </div>
@@ -566,18 +578,9 @@ function EditReceiptModal({
               type="number"
               min="1"
               value={amount}
-              readOnly={payment.amountLocked}
               onChange={(event) => setAmount(event.target.value)}
-              className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                payment.amountLocked ? 'bg-slate-50 text-slate-600' : ''
-              }`}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-            {payment.amountLocked && (
-              <p className="mt-1 text-xs text-slate-500">
-                This receipt is part of an installment plan, so the amount is fixed. Only the receipt number,
-                date, and notes can be changed.
-              </p>
-            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Notes</label>
@@ -694,18 +697,25 @@ function SummaryCard({
 }: {
   label: string
   amount: number
-  color: 'success' | 'amber'
+  color: 'success' | 'amber' | 'primary'
   icon: React.ReactNode
 }) {
   const styles = color === 'success'
     ? 'bg-success-50 text-success-600'
-    : 'bg-amber-50 text-amber-600'
+    : color === 'amber'
+      ? 'bg-amber-50 text-amber-600'
+      : 'bg-primary-50 text-primary-600'
+  const textColor = color === 'success'
+    ? 'text-success-600'
+    : color === 'amber'
+      ? 'text-amber-600'
+      : 'text-primary-600'
 
   return (
     <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
       <div>
         <p className="text-sm text-slate-500">{label}</p>
-        <p className={`text-2xl font-bold ${color === 'success' ? 'text-success-600' : 'text-amber-600'}`}>
+        <p className={`text-2xl font-bold ${textColor}`}>
           Rs {formatPKR(amount)}
         </p>
       </div>

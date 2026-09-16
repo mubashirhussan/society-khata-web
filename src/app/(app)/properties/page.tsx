@@ -199,6 +199,8 @@ function PropertyModal({
   const [propertyNumber, setPropertyNumber] = useState(property?.propertyNumber ?? '')
   const [propertyType, setPropertyType] = useState(property?.propertyType ?? 'plot')
   const [marla, setMarla] = useState(property?.marla?.toString() ?? '')
+  const [lengthFeet, setLengthFeet] = useState(property?.lengthFeet?.toString() ?? '')
+  const [widthFeet, setWidthFeet] = useState(property?.widthFeet?.toString() ?? '')
   const [totalPrice, setTotalPrice] = useState(property?.totalPrice?.toString() ?? '')
   const [bookingDate, setBookingDate] = useState(property?.bookingDate ?? '')
   const [notes, setNotes] = useState(property?.notes ?? '')
@@ -213,6 +215,8 @@ function PropertyModal({
       propertyNumber: propertyNumber.trim(),
       propertyType,
       marla: marla ? parseFloat(marla) : null,
+      lengthFeet: lengthFeet ? parseFloat(lengthFeet) : null,
+      widthFeet: widthFeet ? parseFloat(widthFeet) : null,
       totalPrice: totalPrice ? parseFloat(totalPrice) : 0,
       bookingDate: bookingDate || null,
       status: property?.status ?? 'available',
@@ -268,6 +272,26 @@ function PropertyModal({
               value={totalPrice}
               onChange={(e) => setTotalPrice(e.target.value)}
               placeholder="0"
+              className={inputCls}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Length (ft)" urdu="لمبائی (فٹ)">
+            <input
+              type="number"
+              value={lengthFeet}
+              onChange={(e) => setLengthFeet(e.target.value)}
+              placeholder="Enter length"
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Width (ft)" urdu="چوڑائی (فٹ)">
+            <input
+              type="number"
+              value={widthFeet}
+              onChange={(e) => setWidthFeet(e.target.value)}
+              placeholder="Enter width"
               className={inputCls}
             />
           </Field>

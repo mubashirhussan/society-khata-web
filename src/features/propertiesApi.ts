@@ -17,7 +17,7 @@ export const propertiesApi = api.injectEndpoints({
     }),
     deleteProperty: build.mutation<void, string>({
       query: (id) => ({ url: `/properties/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Properties', 'Dashboard'],
+      invalidatesTags: ['Properties', 'Payments', 'Dashboard'],
     }),
   }),
 })

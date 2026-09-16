@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, MapPin, Phone, Printer, User } from 'lucide-react'
+import { ArrowLeft, Building2, MapPin, Phone, Printer, User, Users } from 'lucide-react'
 import { useGetClientPictureQuery, useGetClientsQuery } from '@/features/clientsApi'
 import { useGetPropertiesQuery } from '@/features/propertiesApi'
 import { useGetPaymentLedgerQuery, useGetPaymentsQuery } from '@/features/paymentsApi'
@@ -199,6 +199,7 @@ export default function ClientProfilePage() {
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
           {client.phone && <InfoItem icon={Phone} label="Phone" value={client.phone} />}
           {client.fatherHusband && <InfoItem icon={User} label="Father/Husband" value={client.fatherHusband} />}
+          {client.caste && <InfoItem icon={Users} label="Caste" value={client.caste} />}
           {client.address && <InfoItem icon={MapPin} label="Address" value={client.address} />}
           {client.notes && <InfoItem icon={User} label="Notes" value={client.notes} />}
         </div>
