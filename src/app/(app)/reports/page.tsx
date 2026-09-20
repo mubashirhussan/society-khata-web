@@ -7,12 +7,11 @@ import { useGetExpensesQuery } from '@/features/expensesApi'
 import { useGetClientsQuery } from '@/features/clientsApi'
 import { formatPKR, formatDate } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
-import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useRequirePermission } from '@/hooks/usePermissions'
+import PrintHeader from '@/components/PrintHeader'
 
 export default function ReportsPage() {
   useRequirePermission(PERMS.reportsView)
-  const { user } = usePermissions()
-  const tenantName = user?.tenantName
   const { data: properties = [], isLoading: loadingProps } = useGetPropertiesQuery()
   const { data: payments = [], isLoading: loadingPay } = useGetPaymentsQuery()
   const { data: expenses = [], isLoading: loadingExp } = useGetExpensesQuery()
@@ -47,10 +46,9 @@ export default function ReportsPage() {
         <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
       ) : (
         <div className="print-area space-y-6">
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 text-center">
-            <h1 className="text-xl font-bold text-slate-900">{tenantName || 'Society Khata'}</h1>
-            <p className="text-sm text-slate-500">Society Khata — سوسائٹی کھاتہ</p>
-            <p className="text-xs text-slate-400 mt-2">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+            <PrintHeader subtitle="Society Khata — سوسائٹی کھاتہ" />
+            <p className="text-xs text-slate-400 mt-2 text-center">
               Report generated: {formatDate(new Date().toISOString())}
             </p>
           </div>

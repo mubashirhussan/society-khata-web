@@ -1,20 +1,20 @@
 export interface User {
-  id: string
+  id: number
   email: string
-  roleId: string
+  roleId: number
   roleName: string
   permissions: string[]
   fullName: string | null
-  tenantId: string
+  tenantId: number
   tenantName: string
   hasLogo?: boolean
   isPlatformManager?: boolean
 }
 
 export interface UserListItem {
-  id: string
+  id: number
   email: string
-  roleId: string
+  roleId: number
   roleName: string
   fullName: string | null
   isActive: boolean
@@ -22,7 +22,7 @@ export interface UserListItem {
 }
 
 export interface Role {
-  id: string
+  id: number
   name: string
   isSystem: boolean
   permissions: string[]
@@ -45,7 +45,7 @@ export interface AuthResponse {
 }
 
 export interface Client {
-  id: string
+  id: number
   name: string
   cnic: string | null
   phone: string | null
@@ -68,7 +68,7 @@ export interface ClientRequest {
 }
 
 export interface Property {
-  id: string
+  id: number
   propertyNumber: string
   propertyType: string
   marla: number | null
@@ -77,7 +77,7 @@ export interface Property {
   totalPrice: number
   bookingDate: string | null
   status: string
-  clientId: string | null
+  clientId: number | null
   notes: string | null
   createdAt: string
   client?: Client | null
@@ -92,15 +92,15 @@ export interface PropertyRequest {
   totalPrice: number
   bookingDate?: string | null
   status: string
-  clientId?: string | null
+  clientId?: number | null
   notes?: string | null
 }
 
 export interface Payment {
-  id: string
+  id: number
   receiptNo: string | null
-  clientId: string | null
-  propertyId: string | null
+  clientId: number | null
+  propertyId: number | null
   amount: number
   paymentDate: string
   notes: string | null
@@ -111,14 +111,14 @@ export interface Payment {
 
 export interface PaymentRequest {
   receiptNo?: string | null
-  clientId?: string | null
-  propertyId?: string | null
+  clientId?: number | null
+  propertyId?: number | null
   amount: number
   paymentDate: string
   notes?: string | null
   paymentMethod?: 'full' | 'installment'
   installmentSchedule?: InstallmentScheduleItem[]
-  installmentDueId?: string | null
+  installmentDueId?: number | null
   planFrequency?: 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | null
 }
 
@@ -128,23 +128,52 @@ export interface InstallmentScheduleItem {
 }
 
 export interface PaymentLedgerRow {
-  id: string
+  id: number
   rowType: 'payment' | 'installment'
   status: 'received' | 'pending' | 'overdue'
   receiptNo: string | null
-  clientId: string | null
-  propertyId: string | null
+  clientId: number | null
+  propertyId: number | null
   amount: number
   date: string
   notes: string | null
-  paymentId: string | null
+  paymentId: number | null
   planFrequency: 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | null
   client?: Client | null
   property?: Property | null
 }
 
+export interface PaymentClientSummary {
+  clientId: number
+  client: Client
+  propertyNumbers: string[]
+  totalPlotAmount: number
+  totalReceived: number
+  pendingAmount: number
+  lastPaymentDate: string
+}
+
+export interface PendingInstallment {
+  id: number
+  date: string | null
+  propertyId: number | null
+  property: Property | null
+  amount: number
+  status: 'pending' | 'overdue'
+}
+
+export interface PaymentClientDetail {
+  client: Client
+  payments: Payment[]
+  pendingInstallments: PendingInstallment[]
+  totalAmount: number
+  totalReceived: number
+  totalPending: number
+  planFrequencies: ('monthly' | 'quarterly' | 'half-yearly' | 'yearly')[]
+}
+
 export interface Expense {
-  id: string
+  id: number
   description: string
   amount: number
   paidTo: string | null
@@ -188,12 +217,12 @@ export interface LoginRequest {
 export interface CreateUserRequest {
   email: string
   password: string
-  roleId: string
+  roleId: number
   fullName?: string
 }
 
 export interface SocietyOverview {
-  id: string
+  id: number
   name: string
   phone: string | null
   createdAt: string

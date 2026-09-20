@@ -2,29 +2,30 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, X, Printer } from 'lucide-react'
+import { Plus, Search, X, Printer, Eye, Trash2 } from 'lucide-react'
 import {
   useGetPaymentsQuery,
   useGetPaymentLedgerQuery,
+  useGetPaymentsSummaryQuery,
   useCreatePaymentMutation,
   useUpdatePaymentMutation,
 } from '@/features/paymentsApi'
-import { useGetClientsQuery } from '@/features/clientsApi'
+import { useGetClientsQuery, useDeleteClientMutation } from '@/features/clientsApi'
 import { useGetPropertiesQuery } from '@/features/propertiesApi'
 import { formatPKR, formatDate, numberToWords, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import { useConfirm } from '@/hooks/useConfirm'
+import PrintHeader from '@/components/PrintHeader'
 import type { Client, Property, Payment, PaymentLedgerRow, PaymentRequest } from '@/lib/types'
 
 export default function PaymentsPage() {
   useRequirePermission(PERMS.paymentsView)
   const router = useRouter()
-  const { user, can } = usePermissions()
-  const tenantName = user?.tenantName
-  const { data: payments = [], isLoading: loading } = useGetPaymentsQuery()
-  const { data: ledger = [], isLoading: ledgerLoading } = useGetPaymentLedgerQuery()
-  const { data: clients = [] } = useGetClientsQuery()
-  const { data: properties = [] } = useGetPropertiesQuery()
+  const { can } = usePermissions()
+  const { data: summaries = [], isLoading: loading } = useGetPaymentsSummaryQuery()
+  const [deleteClient] = useDeleteClientMutation()
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -32,73 +33,15 @@ export default function PaymentsPage() {
   const [printReceipt, setPrintReceipt] = useState<Payment | null>(null)
   const [receivingDue, setReceivingDue] = useState<PaymentLedgerRow | null>(null)
 
+  // Only fetched when the Receive Payment modal actually needs them for its form selects.
+  const { data: payments = [] } = useGetPaymentsQuery(undefined, { skip: !showModal })
+  const { data: ledger = [] } = useGetPaymentLedgerQuery(undefined, { skip: !showModal })
+  const { data: clients = [] } = useGetClientsQuery(undefined, { skip: !showModal })
+  const { data: properties = [] } = useGetPropertiesQuery(undefined, { skip: !showModal })
+
   const canCreate = can(PERMS.paymentsCreate)
   const canEdit = can(PERMS.paymentsEdit)
-
-  const propertyClients = new Map(
-    payments
-      .filter((payment) => payment.propertyId && payment.clientId)
-      .map((payment) => [payment.propertyId as string, payment.clientId as string])
-  )
-  const summaries = Array.from(
-    payments.reduce((map, payment) => {
-      const clientId = payment.clientId
-        ?? payment.property?.clientId
-        ?? (payment.propertyId ? propertyClients.get(payment.propertyId) : undefined)
-      const client = payment.client ?? clients.find((item) => item.id === clientId)
-      if (!clientId || !client) return map
-      const current = map.get(clientId) ?? {
-        client,
-        totalReceived: 0,
-        pendingAmount: 0,
-        properties: new Set<string>(),
-        propertyIds: new Set<string>(),
-        lastPaymentDate: payment.paymentDate,
-      }
-      current.totalReceived += payment.amount
-      if (payment.property?.propertyNumber) current.properties.add(payment.property.propertyNumber)
-      if (payment.propertyId) current.propertyIds.add(payment.propertyId)
-      if (payment.paymentDate > current.lastPaymentDate) current.lastPaymentDate = payment.paymentDate
-      map.set(clientId, current)
-      return map
-    }, new Map<string, {
-      client: Client
-      totalReceived: number
-      pendingAmount: number
-      properties: Set<string>
-      propertyIds: Set<string>
-      lastPaymentDate: string
-    }>())
-  ).map(([clientId, summary]) => {
-    const scheduledPropertyIds = new Set(
-      ledger
-        .filter((row) => row.rowType === 'installment' && row.clientId === clientId)
-        .map((row) => row.propertyId)
-        .filter(Boolean)
-    )
-    const scheduledPending = ledger
-      .filter((row) => row.rowType === 'installment' && row.clientId === clientId)
-      .reduce((sum, row) => sum + row.amount, 0)
-    const unscheduledPending = Array.from(summary.propertyIds)
-      .filter((propertyId) => !scheduledPropertyIds.has(propertyId))
-      .reduce((sum, propertyId) => {
-        const property = payments.find((payment) => payment.propertyId === propertyId)?.property
-        const paid = payments
-          .filter((payment) => payment.propertyId === propertyId)
-          .reduce((paymentSum, payment) => paymentSum + payment.amount, 0)
-        return sum + Math.max(0, (property?.totalPrice ?? paid) - paid)
-      }, 0)
-
-    return {
-      clientId,
-      ...summary,
-      totalPlotAmount: Array.from(summary.propertyIds).reduce((sum, propertyId) => {
-        const property = payments.find((payment) => payment.propertyId === propertyId)?.property
-        return sum + (property?.totalPrice ?? 0)
-      }, 0),
-      pendingAmount: scheduledPending + unscheduledPending,
-    }
-  })
+  const canDeleteClient = can(PERMS.propertiesDelete)
 
   const filtered = summaries.filter((summary) => {
     const q = search.toLowerCase()
@@ -106,7 +49,7 @@ export default function PaymentsPage() {
       summary.client.name.toLowerCase().includes(q) ||
       (summary.client.cnic?.toLowerCase().includes(q) ?? false) ||
       (summary.client.phone?.toLowerCase().includes(q) ?? false) ||
-      Array.from(summary.properties).some((property) => property.toLowerCase().includes(q))
+      summary.propertyNumbers.some((property) => property.toLowerCase().includes(q))
     )
   })
 
@@ -145,7 +88,7 @@ export default function PaymentsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        {loading || ledgerLoading ? (
+        {loading ? (
           <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">No payments recorded yet.</div>
@@ -162,15 +105,12 @@ export default function PaymentsPage() {
                   <th className="px-4 py-3 text-left font-semibold">Total Received</th>
                   <th className="px-4 py-3 text-left font-semibold">Pending</th>
                   <th className="px-4 py-3 text-left font-semibold">Last Payment</th>
+                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map((summary, index) => (
-                  <tr
-                    key={summary.clientId}
-                    onClick={() => router.push(`/payments/${summary.clientId}`)}
-                    className="cursor-pointer hover:bg-primary-50/50 transition-colors"
-                  >
+                  <tr key={summary.clientId} className="hover:bg-primary-50/50 transition-colors">
                     <td className="px-4 py-3 text-slate-500">{index + 1}</td>
                     <td className="px-4 py-3 font-semibold text-slate-800">{summary.client.name}</td>
                     <td className="px-4 py-3 text-slate-600">
@@ -178,7 +118,7 @@ export default function PaymentsPage() {
                       <div className="text-xs text-slate-400">{summary.client.phone ?? '-'}</div>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {Array.from(summary.properties).join(', ') || '-'}
+                      {summary.propertyNumbers.join(', ') || '-'}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-700">
                       Rs {formatPKR(summary.totalPlotAmount)}
@@ -190,6 +130,39 @@ export default function PaymentsPage() {
                       Rs {formatPKR(summary.pendingAmount)}
                     </td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(summary.lastPaymentDate)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            router.push(`/payments/${summary.clientId}`)
+                          }}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
+                          title="View payments"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {canDeleteClient && (
+                          <button
+                            onClick={async (event) => {
+                              event.stopPropagation()
+                              if (
+                                await confirm(
+                                  `Delete ${summary.client.name}? This removes the client along with their properties, payments and pending installments.`
+                                )
+                              ) {
+                                const result = await deleteClient(summary.clientId)
+                                if ('error' in result) alert(getApiError(result.error))
+                              }
+                            }}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-error-50 hover:text-error-600"
+                            title="Delete client"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -220,10 +193,10 @@ export default function PaymentsPage() {
       {printReceipt && (
         <ReceiptModal
           payment={printReceipt}
-          tenantName={tenantName}
           onClose={() => setPrintReceipt(null)}
         />
       )}
+      {ConfirmDialog}
     </div>
   )
 }
@@ -260,8 +233,12 @@ function PaymentModal({
   const [createPayment] = useCreatePaymentMutation()
   const [updatePayment] = useUpdatePaymentMutation()
   const [receiptNo, setReceiptNo] = useState(payment?.receiptNo ?? `R-${Date.now().toString().slice(-6)}`)
-  const [clientId, setClientId] = useState(payment?.clientId ?? due?.clientId ?? '')
-  const [propertyId, setPropertyId] = useState(payment?.propertyId ?? due?.propertyId ?? '')
+  const [clientId, setClientId] = useState(
+    payment?.clientId != null ? String(payment.clientId) : due?.clientId != null ? String(due.clientId) : ''
+  )
+  const [propertyId, setPropertyId] = useState(
+    payment?.propertyId != null ? String(payment.propertyId) : due?.propertyId != null ? String(due.propertyId) : ''
+  )
   const [paymentMethod, setPaymentMethod] = useState<'full' | 'installment'>('installment')
   const [amount, setAmount] = useState(payment?.amount?.toString() ?? due?.amount.toString() ?? '')
   const [paymentDate, setPaymentDate] = useState(
@@ -273,15 +250,15 @@ function PaymentModal({
   const [installmentDuration, setInstallmentDuration] = useState('')
   const [planFrequency, setPlanFrequency] = useState<'monthly' | 'quarterly' | 'half-yearly' | 'yearly'>('monthly')
 
-  const selectedProperty = properties.find((property) => property.id === propertyId)
+  const selectedProperty = properties.find((property) => property.id === Number(propertyId))
   const recordedPayments = payments
-    .filter((item) => item.propertyId === propertyId && item.id !== payment?.id)
+    .filter((item) => item.propertyId === Number(propertyId) && item.id !== payment?.id)
     .reduce((sum, item) => sum + item.amount, 0)
   const remainingBalance = selectedProperty
     ? Math.max(0, selectedProperty.totalPrice - recordedPayments)
     : 0
   const existingPlan = ledger.filter(
-    (row) => row.rowType === 'installment' && row.propertyId === propertyId
+    (row) => row.rowType === 'installment' && row.propertyId === Number(propertyId)
   )
   const enteredAmount = paymentMethod === 'full' ? remainingBalance : Number(amount || 0)
   const scheduleTarget = Math.max(0, remainingBalance - enteredAmount)
@@ -324,6 +301,10 @@ function PaymentModal({
       setError('Payment amount must be greater than zero.')
       return
     }
+    if (remainingBalance > 0 && enteredAmount > remainingBalance) {
+      setError(`Payment cannot exceed the pending amount of Rs ${formatPKR(remainingBalance)}.`)
+      return
+    }
     const isNewPlan = !payment && !due && paymentMethod === 'installment'
       && existingPlan.length === 0 && scheduleTarget > 0
     if (!payment && !due && existingPlan.length > 0) {
@@ -338,8 +319,8 @@ function PaymentModal({
     setError(null)
     const body: PaymentRequest = {
       receiptNo: receiptNo || null,
-      clientId,
-      propertyId,
+      clientId: Number(clientId),
+      propertyId: Number(propertyId),
       amount: enteredAmount,
       paymentDate,
       notes: notes || null,
@@ -365,7 +346,7 @@ function PaymentModal({
   }
 
   const filteredProperties = clientId
-    ? properties.filter((p) => !p.clientId || p.clientId === clientId)
+    ? properties.filter((p) => !p.clientId || p.clientId === Number(clientId))
     : properties
 
   return (
@@ -483,6 +464,7 @@ function PaymentModal({
             </label>
             <input
               type="number"
+              max={remainingBalance > 0 ? remainingBalance : undefined}
               value={paymentMethod === 'full' ? remainingBalance : amount}
               onChange={(e) => setAmount(e.target.value)}
               readOnly={paymentMethod === 'full'}
@@ -538,6 +520,7 @@ function PaymentModal({
                       <input
                         type="number"
                         min="1"
+                        max={remainingBalance > 0 ? remainingBalance : undefined}
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -636,11 +619,9 @@ function PaymentModal({
 
 function ReceiptModal({
   payment,
-  tenantName,
   onClose,
 }: {
   payment: Payment
-  tenantName?: string
   onClose: () => void
 }) {
   const client = payment.client
@@ -665,9 +646,8 @@ function ReceiptModal({
         </div>
 
         <div className="print-area p-6">
-          <div className="text-center mb-6 pb-4 border-b-2 border-primary-600">
-            <h1 className="text-xl font-bold text-slate-900">{tenantName || 'Society Khata'}</h1>
-            <p className="text-sm text-slate-500">Society Khata — سوسائٹی کھاتہ</p>
+          <div className="mb-6 pb-4 border-b-2 border-primary-600">
+            <PrintHeader subtitle="Society Khata — سوسائٹی کھاتہ" />
           </div>
 
           <div className="text-center mb-4">

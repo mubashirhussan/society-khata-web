@@ -11,11 +11,11 @@ export const expensesApi = api.injectEndpoints({
       query: (body) => ({ url: '/expenses', method: 'POST', body }),
       invalidatesTags: ['Expenses', 'Dashboard'],
     }),
-    updateExpense: build.mutation<Expense, { id: string; body: ExpenseRequest }>({
+    updateExpense: build.mutation<Expense, { id: number; body: ExpenseRequest }>({
       query: ({ id, body }) => ({ url: `/expenses/${id}`, method: 'PUT', body }),
       invalidatesTags: ['Expenses', 'Dashboard'],
     }),
-    deleteExpense: build.mutation<void, string>({
+    deleteExpense: build.mutation<void, number>({
       query: (id) => ({ url: `/expenses/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Expenses', 'Dashboard'],
     }),

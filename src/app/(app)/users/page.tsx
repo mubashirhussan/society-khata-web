@@ -154,8 +154,8 @@ function CreateUserModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const defaultRoleId = roles.find((r) => r.name === 'Accountant')?.id ?? roles[0]?.id ?? ''
-  const selectedRoleId = roleId || defaultRoleId
+  const defaultRoleId = roles.find((r) => r.name === 'Accountant')?.id ?? roles[0]?.id
+  const selectedRoleId = roleId || (defaultRoleId != null ? String(defaultRoleId) : '')
 
   const handleSave = async () => {
     if (!email.trim() || !password || !selectedRoleId) return
@@ -165,7 +165,7 @@ function CreateUserModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
       await createUser({
         email: email.trim(),
         password,
-        roleId: selectedRoleId,
+        roleId: Number(selectedRoleId),
         fullName: fullName.trim() || undefined,
       }).unwrap()
       onSaved()

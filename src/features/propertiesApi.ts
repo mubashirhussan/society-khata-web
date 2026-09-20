@@ -11,11 +11,11 @@ export const propertiesApi = api.injectEndpoints({
       query: (body) => ({ url: '/properties', method: 'POST', body }),
       invalidatesTags: ['Properties', 'Dashboard'],
     }),
-    updateProperty: build.mutation<Property, { id: string; body: PropertyRequest }>({
+    updateProperty: build.mutation<Property, { id: number; body: PropertyRequest }>({
       query: ({ id, body }) => ({ url: `/properties/${id}`, method: 'PUT', body }),
       invalidatesTags: ['Properties', 'Payments', 'Dashboard'],
     }),
-    deleteProperty: build.mutation<void, string>({
+    deleteProperty: build.mutation<void, number>({
       query: (id) => ({ url: `/properties/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Properties', 'Payments', 'Dashboard'],
     }),

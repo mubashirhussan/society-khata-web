@@ -11,6 +11,7 @@ import { useGetPaymentLedgerQuery, useGetPaymentsQuery } from '@/features/paymen
 import { formatDate, formatPKR } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
+import PrintHeader from '@/components/PrintHeader'
 import type { Client } from '@/lib/types'
 
 export default function ClientProfilePage() {
@@ -23,18 +24,19 @@ export default function ClientProfilePage() {
   const { data: payments = [], isLoading: paymentsLoading } = useGetPaymentsQuery()
   const { data: ledger = [], isLoading: ledgerLoading } = useGetPaymentLedgerQuery()
 
-  const client = clients.find((item) => item.id === params.clientId)
-  const clientProperties = properties.filter((property) => property.clientId === params.clientId)
+  const clientId = Number(params.clientId)
+  const client = clients.find((item) => item.id === clientId)
+  const clientProperties = properties.filter((property) => property.clientId === clientId)
   const isLoading = clientsLoading || propertiesLoading || paymentsLoading || ledgerLoading
 
   const clientPayments = payments
-    .filter((payment) => payment.clientId === params.clientId)
+    .filter((payment) => payment.clientId === clientId)
     .sort((a, b) => b.paymentDate.localeCompare(a.paymentDate))
 
   const pendingRows = ledger
     .filter(
       (row) =>
-        row.clientId === params.clientId &&
+        row.clientId === clientId &&
         row.rowType === 'installment' &&
         (row.status === 'pending' || row.status === 'overdue')
     )
@@ -73,11 +75,11 @@ export default function ClientProfilePage() {
     }>()
 
     for (const row of pendingRows) {
-      const propertyId = row.propertyId ?? 'unknown'
+      const propertyId = String(row.propertyId ?? 'unknown')
       const label = row.property?.propertyNumber ?? (propertyId === 'unknown' ? 'Unassigned' : propertyId)
       const amount = row.amount
       const item = {
-        key: row.id,
+        key: String(row.id),
         left: row.date ? formatDate(row.date) : 'Not scheduled',
         middle: row.status,
         right: `Rs ${formatPKR(amount)}`,
@@ -107,13 +109,14 @@ export default function ClientProfilePage() {
         right: `Rs ${formatPKR(amount)}`,
         tone: 'amber' as const,
       }
-      const existing = groups.get(item.property.id)
+      const propertyKey = String(item.property.id)
+      const existing = groups.get(propertyKey)
       if (existing) {
         existing.rows.push(row)
         existing.total += amount
       } else {
-        groups.set(item.property.id, {
-          propertyId: item.property.id,
+        groups.set(propertyKey, {
+          propertyId: propertyKey,
           label: item.property.propertyNumber,
           propertyType: item.property.propertyType,
           rows: [row],
@@ -187,6 +190,9 @@ export default function ClientProfilePage() {
       </div>
 
       <div className="print-area space-y-6 rounded-xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+        <div className="border-b-2 border-primary-600 pb-4">
+          <PrintHeader subtitle="Client Profile — گاہک پروفائل" />
+        </div>
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
           <ClientAvatar client={client} size="large" />
           <div>
@@ -256,7 +262,7 @@ export default function ClientProfilePage() {
           <PaymentRows
             emptyText="No payments received."
             rows={clientPayments.map((payment) => ({
-              key: payment.id,
+              key: String(payment.id),
               left: payment.receiptNo ?? '-',
               middle: `${formatDate(payment.paymentDate)} · ${payment.property?.propertyNumber ?? '-'}`,
               right: `Rs ${formatPKR(payment.amount)}`,

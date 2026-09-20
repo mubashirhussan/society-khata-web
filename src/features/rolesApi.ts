@@ -11,7 +11,7 @@ export const rolesApi = api.injectEndpoints({
       query: () => '/permissions',
       providesTags: ['Permissions'],
     }),
-    updateRolePermissions: build.mutation<Role, { id: string; permissionKeys: string[] }>({
+    updateRolePermissions: build.mutation<Role, { id: number; permissionKeys: string[] }>({
       query: ({ id, permissionKeys }) => ({
         url: `/roles/${id}/permissions`,
         method: 'PUT',

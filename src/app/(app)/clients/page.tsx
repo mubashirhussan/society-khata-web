@@ -209,7 +209,7 @@ function ClientModal({
   const [notes, setNotes] = useState(client?.notes ?? '')
   const [picture, setPicture] = useState<File | null>(null)
   const [picturePreview, setPicturePreview] = useState<string | null>(null)
-  const [createdClientId, setCreatedClientId] = useState<string | null>(null)
+  const [createdClientId, setCreatedClientId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

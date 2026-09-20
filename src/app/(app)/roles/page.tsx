@@ -17,7 +17,7 @@ export default function RolesPage() {
   const { data: permissionGroups = [], isLoading: loadingPerms } = useGetPermissionsQuery(undefined, { skip: !allowed })
   const [updatePermissions, { isLoading: saving }] = useUpdateRolePermissionsMutation()
 
-  const [selectedRoleId, setSelectedRoleId] = useState<string>('')
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
