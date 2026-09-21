@@ -15,7 +15,19 @@ export const usersApi = api.injectEndpoints({
       query: (id) => ({ url: `/users/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Users'],
     }),
+    resetUserPassword: build.mutation<void, { id: number; newPassword: string }>({
+      query: ({ id, newPassword }) => ({
+        url: `/users/${id}/reset-password`,
+        method: 'POST',
+        body: { newPassword },
+      }),
+    }),
   }),
 })
 
-export const { useGetUsersQuery, useCreateUserMutation, useDeleteUserMutation } = usersApi
+export const {
+  useGetUsersQuery,
+  useCreateUserMutation,
+  useDeleteUserMutation,
+  useResetUserPasswordMutation,
+} = usersApi

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { Plus, Trash2, Users, Shield, UserCircle } from 'lucide-react'
+import { Plus, Trash2, Users, Shield, UserCircle, KeyRound } from 'lucide-react'
 import {
   useGetUsersQuery,
   useCreateUserMutation,
   useDeleteUserMutation,
+  useResetUserPasswordMutation,
 } from '@/features/usersApi'
 import { useGetAssignableRolesQuery } from '@/features/rolesApi'
 import { formatDate, getApiError } from '@/lib/utils'
@@ -14,6 +15,7 @@ import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
 import { useConfirm } from '@/hooks/useConfirm'
 import Modal, { ModalActions, Field, inputCls } from '@/components/Modal'
 import { PasswordInput } from '@/components/FormInputs'
+import type { UserListItem } from '@/lib/types'
 
 export default function UsersPage() {
   const allowed = useRequirePermission(PERMS.usersView)
@@ -23,6 +25,7 @@ export default function UsersPage() {
   const { data: users = [], isLoading: loading } = useGetUsersQuery(undefined, { skip: !allowed })
   const [deleteUser] = useDeleteUserMutation()
   const [showModal, setShowModal] = useState(false)
+  const [resetUserTarget, setResetUserTarget] = useState<UserListItem | null>(null)
   const { confirm, ConfirmDialog } = useConfirm()
 
   if (!allowed) {
@@ -109,7 +112,14 @@ export default function UsersPage() {
                     </td>
                     {canManage && (
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setResetUserTarget(u)}
+                            className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                            title="Reset Password"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={async () => {
                               if (await confirm(`Delete user ${u.email}?`)) {
@@ -139,8 +149,60 @@ export default function UsersPage() {
       {showModal && canManage && (
         <CreateUserModal onClose={() => setShowModal(false)} onSaved={() => setShowModal(false)} />
       )}
+      {resetUserTarget && canManage && (
+        <ResetPasswordModal user={resetUserTarget} onClose={() => setResetUserTarget(null)} />
+      )}
       {ConfirmDialog}
     </div>
+  )
+}
+
+function ResetPasswordModal({ user, onClose }: { user: UserListItem; onClose: () => void }) {
+  const [resetPassword] = useResetUserPasswordMutation()
+  const [newPassword, setNewPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSave = async () => {
+    if (!newPassword) return
+    setSaving(true)
+    setError(null)
+    try {
+      await resetPassword({ id: user.id, newPassword }).unwrap()
+      onClose()
+    } catch (err) {
+      setError(getApiError(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal title={`Reset Password — ${user.email}`} onClose={onClose}>
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault()
+          handleSave()
+        }}
+        className="space-y-4"
+      >
+        <Field label="New Password" urdu="نیا پاس ورڈ">
+          <PasswordInput
+            required
+            minLength={6}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            className={inputCls}
+          />
+        </Field>
+        {error && (
+          <div className="bg-error-50 border border-error-200 text-error-700 text-sm rounded-lg px-3 py-2">{error}</div>
+        )}
+        <ModalActions onSave={handleSave} saving={saving} onCancel={onClose} saveLabel="Reset Password" />
+      </form>
+    </Modal>
   )
 }
 
