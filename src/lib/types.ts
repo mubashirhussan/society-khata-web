@@ -227,6 +227,9 @@ export interface SocietyOverview {
   phone: string | null
   createdAt: string
   userCount: number
+  isActive: boolean
+  adminUserId: number | null
+  adminEmail: string | null
 }
 
 export interface SocietiesOverview {
