@@ -22,7 +22,6 @@ export default function PlatformSocietiesPage() {
   const dispatch = useDispatch()
   const { data, isLoading, isError } = useGetSocietiesQuery()
   const [setSocietyActive] = useSetSocietyActiveMutation()
-  const [deleteSociety] = useDeleteSocietyMutation()
   const { confirm, ConfirmDialog } = useConfirm()
   const [resetTarget, setResetTarget] = useState<SocietyOverview | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SocietyOverview | null>(null)
