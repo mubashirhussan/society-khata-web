@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '@/store'
 import { setCredentials, setUser } from '@/store/authSlice'
+import { api } from '@/store/api'
 import { useLoginMutation, useRegisterMutation, useUploadTenantLogoMutation } from '@/features/authApi'
 import { getApiError } from '@/lib/utils'
 import { getHomeRoute } from '@/lib/permissions'
@@ -56,6 +57,8 @@ export default function LoginPage() {
           }).unwrap()
         : await login({ email: email.trim(), password }).unwrap()
 
+      // Drop any cached data (e.g. the previous society's logo) before switching accounts.
+      dispatch(api.util.resetApiState())
       dispatch(setCredentials(result))
 
       let nextUser = result.user
