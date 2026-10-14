@@ -222,7 +222,7 @@ export default function ReportsPage() {
                     expenses.map((e) => (
                       <tr key={e.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 text-slate-600">{formatDate(e.expenseDate)}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{e.description}</td>
+                        <td className="px-4 py-3 font-medium text-slate-800">{e.title ?? e.description}{e.title && e.description ? ` - ${e.description}` : ''}</td>
                         <td className="px-4 py-3 text-slate-600">{e.paidTo ?? '-'}</td>
                         <td className="px-4 py-3 font-bold text-error-600">Rs {formatPKR(e.amount)}</td>
                       </tr>

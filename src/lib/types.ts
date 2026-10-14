@@ -172,8 +172,15 @@ export interface PaymentClientDetail {
   planFrequencies: ('monthly' | 'quarterly' | 'half-yearly' | 'yearly')[]
 }
 
+export interface ExpenseTitle {
+  id: number
+  name: string
+}
+
 export interface Expense {
   id: number
+  expenseTitleId: number | null
+  title: string | null
   description: string
   amount: number
   paidTo: string | null
@@ -183,7 +190,8 @@ export interface Expense {
 }
 
 export interface ExpenseRequest {
-  description: string
+  expenseTitleId: number | null
+  description?: string
   amount: number
   paidTo?: string | null
   expenseDate: string

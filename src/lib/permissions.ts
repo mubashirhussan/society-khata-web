@@ -40,6 +40,7 @@ export const NAV_PERMISSIONS: Record<string, PermissionKey> = {
   '/clients': PERMS.propertiesView,
   '/payments': PERMS.paymentsView,
   '/expenses': PERMS.expensesView,
+  '/expense-titles': PERMS.expensesView,
   '/reports': PERMS.reportsView,
   '/users': PERMS.usersView,
   '/roles': PERMS.rolesManage,

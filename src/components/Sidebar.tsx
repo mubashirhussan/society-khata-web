@@ -16,6 +16,7 @@ import {
   Users,
   UserRound,
   Shield,
+  Tags,
 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/clients', label: 'Clients', urdu: 'گاہک', icon: UserRound },
   { href: '/payments', label: 'Payments', urdu: 'ادائیگی', icon: Wallet },
   { href: '/expenses', label: 'Expenses', urdu: 'اخراجات', icon: Receipt },
+  { href: '/expense-titles', label: 'Expense Categories', urdu: 'اخراجات کے زمرے', icon: Tags },
   { href: '/reports', label: 'Reports', urdu: 'رپورٹ', icon: FileText },
   { href: '/users', label: 'Users', urdu: 'صارفین', icon: Users },
   { href: '/roles', label: 'Roles', urdu: 'کردار', icon: Shield },

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Plus, Search, Edit2, Trash2, X, Receipt } from 'lucide-react'
 import {
   useGetExpensesQuery,
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
   useDeleteExpenseMutation,
+  useGetExpenseTitlesQuery,
 } from '@/features/expensesApi'
 import { formatPKR, formatDate, getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
@@ -29,7 +31,7 @@ export default function ExpensesPage() {
 
   const filtered = expenses.filter((e) => {
     const q = search.toLowerCase()
-    return e.description.toLowerCase().includes(q) || (e.paidTo?.toLowerCase().includes(q) ?? false)
+    return (e.title ?? '').toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || (e.paidTo?.toLowerCase().includes(q) ?? false)
   })
 
   const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0)
@@ -90,6 +92,7 @@ export default function ExpensesPage() {
               <thead>
                 <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
                   <th className="px-4 py-3 text-left font-semibold">Date</th>
+                  <th className="px-4 py-3 text-left font-semibold">Category</th>
                   <th className="px-4 py-3 text-left font-semibold">Description</th>
                   <th className="px-4 py-3 text-left font-semibold">Paid To</th>
                   <th className="px-4 py-3 text-left font-semibold">Amount</th>
@@ -100,7 +103,8 @@ export default function ExpensesPage() {
                 {filtered.map((e) => (
                   <tr key={e.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-slate-600">{formatDate(e.expenseDate)}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{e.description}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800">{e.title ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-600">{e.description || '-'}</td>
                     <td className="px-4 py-3 text-slate-600">{e.paidTo ?? '-'}</td>
                     <td className="px-4 py-3 font-bold text-error-600">Rs {formatPKR(e.amount)}</td>
                     <td className="px-4 py-3">
@@ -120,7 +124,7 @@ export default function ExpensesPage() {
                         {canDelete && (
                           <button
                             onClick={async () => {
-                              if (await confirm(`Delete expense ${formatPKR(e.amount)}?`)) {
+                              if (await confirm(`Delete expense ${e.title ?? e.description} (Rs ${formatPKR(e.amount)})?`)) {
                                 await deleteExpense(e.id)
                               }
                             }}
@@ -163,6 +167,8 @@ function ExpenseModal({
 }) {
   const [createExpense] = useCreateExpenseMutation()
   const [updateExpense] = useUpdateExpenseMutation()
+  const { data: titles = [] } = useGetExpenseTitlesQuery()
+  const [titleId, setTitleId] = useState<string>(expense?.expenseTitleId?.toString() ?? '')
   const [description, setDescription] = useState(expense?.description ?? '')
   const [amount, setAmount] = useState(expense?.amount?.toString() ?? '')
   const [paidTo, setPaidTo] = useState(expense?.paidTo ?? '')
@@ -174,10 +180,11 @@ function ExpenseModal({
   const [error, setError] = useState<string | null>(null)
 
   const handleSave = async () => {
-    if (!description.trim() || !amount) return
+    if (!titleId || !amount) return
     setSaving(true)
     setError(null)
     const body = {
+      expenseTitleId: Number(titleId),
       description: description.trim(),
       amount: parseFloat(amount),
       paidTo: paidTo || null,
@@ -208,6 +215,28 @@ function ExpenseModal({
           </button>
         </div>
         <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Category <span className="font-urdu text-xs text-slate-400">زمرہ</span>
+            </label>
+            <select
+              value={titleId}
+              onChange={(e) => setTitleId(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Select category</option>
+              {titles.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            {titles.length === 0 && (
+              <p className="text-xs text-slate-500 mt-1">
+                No categories yet. <Link href="/expense-titles" className="text-primary-600 underline">Create one</Link>
+              </p>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Description <span className="font-urdu text-xs text-slate-400">تفصیل</span>
