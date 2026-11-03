@@ -16,6 +16,7 @@ import {
   Users,
   UserRound,
   Shield,
+  KeyRound,
   Tags,
 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -36,6 +37,7 @@ const navItems = [
   { href: '/reports', label: 'Reports', urdu: 'رپورٹ', icon: FileText },
   { href: '/users', label: 'Users', urdu: 'صارفین', icon: Users },
   { href: '/roles', label: 'Roles', urdu: 'کردار', icon: Shield },
+  { href: '/permissions', label: 'Permissions', urdu: 'اجازتیں', icon: KeyRound },
 ]
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {

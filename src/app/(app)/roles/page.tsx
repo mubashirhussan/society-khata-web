@@ -1,42 +1,33 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Shield, Save, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import Link from 'next/link'
+import { Plus, Pencil, Trash2, KeyRound } from 'lucide-react'
 import {
   useGetRolesQuery,
-  useGetPermissionsQuery,
-  useUpdateRolePermissionsMutation,
+  useCreateRoleMutation,
+  useRenameRoleMutation,
+  useDeleteRoleMutation,
 } from '@/features/rolesApi'
+import type { Role } from '@/lib/types'
 import { getApiError } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
 import { useRequirePermission } from '@/hooks/usePermissions'
+import Modal, { ModalActions, Field, inputCls } from '@/components/Modal'
 
 export default function RolesPage() {
   const allowed = useRequirePermission(PERMS.rolesManage)
-  const { data: roles = [], isLoading: loadingRoles } = useGetRolesQuery(undefined, { skip: !allowed })
-  const { data: permissionGroups = [], isLoading: loadingPerms } = useGetPermissionsQuery(undefined, { skip: !allowed })
-  const [updatePermissions, { isLoading: saving }] = useUpdateRolePermissionsMutation()
+  const { data: roles = [], isLoading } = useGetRolesQuery(undefined, { skip: !allowed })
+  const [createRole, { isLoading: creating }] = useCreateRoleMutation()
+  const [renameRole, { isLoading: renaming }] = useRenameRoleMutation()
+  const [deleteRole] = useDeleteRoleMutation()
 
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  // null = closed, 'new' = create, Role = edit
+  const [editing, setEditing] = useState<Role | 'new' | null>(null)
+  const [name, setName] = useState('')
+  const [modalError, setModalError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const selectedRole = useMemo(
-    () => roles.find((r) => r.id === selectedRoleId),
-    [roles, selectedRoleId]
-  )
-
-  useEffect(() => {
-    if (roles.length > 0 && !selectedRoleId) {
-      setSelectedRoleId(roles[0].id)
-      setSelectedKeys(roles[0].permissions)
-    }
-  }, [roles, selectedRoleId])
-
-  useEffect(() => {
-    if (selectedRole) setSelectedKeys(selectedRole.permissions)
-  }, [selectedRole])
 
   if (!allowed) {
     return (
@@ -46,28 +37,41 @@ export default function RolesPage() {
     )
   }
 
-  const loading = loadingRoles || loadingPerms
-
-  const togglePermission = (key: string) => {
-    setSelectedKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    )
-  }
-
-  const toggleGroup = (keys: string[], checked: boolean) => {
-    setSelectedKeys((prev) => {
-      const without = prev.filter((k) => !keys.includes(k))
-      return checked ? [...without, ...keys] : without
-    })
+  const openModal = (target: Role | 'new') => {
+    setEditing(target)
+    setName(target === 'new' ? '' : target.name)
+    setModalError(null)
   }
 
   const handleSave = async () => {
-    if (!selectedRoleId) return
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setModalError('Role name is required.')
+      return
+    }
+    setModalError(null)
+    try {
+      if (editing === 'new') {
+        await createRole({ name: trimmed, permissionKeys: [] }).unwrap()
+        setMessage(`Role "${trimmed}" created. Set its access from the Permissions page.`)
+      } else if (editing) {
+        await renameRole({ id: editing.id, name: trimmed }).unwrap()
+        setMessage(`Role renamed to "${trimmed}".`)
+      }
+      setError(null)
+      setEditing(null)
+    } catch (err) {
+      setModalError(getApiError(err))
+    }
+  }
+
+  const handleDelete = async (role: Role) => {
+    if (!window.confirm(`Delete role "${role.name}"?`)) return
     setError(null)
     setMessage(null)
     try {
-      await updatePermissions({ id: selectedRoleId, permissionKeys: selectedKeys }).unwrap()
-      setMessage('Permissions saved. Users must sign in again for changes to apply.')
+      await deleteRole(role.id).unwrap()
+      setMessage(`Role "${role.name}" deleted.`)
     } catch (err) {
       setError(getApiError(err))
     }
@@ -78,19 +82,16 @@ export default function RolesPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
-            Roles & Permissions <span className="font-urdu text-lg text-slate-500">کردار و اجازت</span>
+            Roles <span className="font-urdu text-lg text-slate-500">کردار</span>
           </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Control which screens each role can access
-          </p>
+          <p className="text-sm text-slate-500 mt-1">Add, rename or remove roles</p>
         </div>
         <button
-          onClick={handleSave}
-          disabled={saving || !selectedRoleId}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-60"
+          onClick={() => openModal('new')}
+          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save Permissions
+          <Plus className="w-4 h-4" />
+          Add Role
         </button>
       </div>
 
@@ -105,76 +106,111 @@ export default function RolesPage() {
         </div>
       )}
 
-      {loading ? (
-        <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-2">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-              <Shield className="w-4 h-4" /> Roles
-            </h3>
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                onClick={() => setSelectedRoleId(role.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  selectedRoleId === role.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {role.name}
-                {role.isSystem && (
-                  <span className={`block text-xs mt-0.5 ${selectedRoleId === role.id ? 'text-primary-100' : 'text-slate-400'}`}>
-                    System role
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-x-auto">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+                <th className="px-5 py-3 font-medium">Role</th>
+                <th className="px-5 py-3 font-medium">Type</th>
+                <th className="px-5 py-3 font-medium">Permissions</th>
+                <th className="px-5 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map((role) => (
+                <tr key={role.id} className="border-b border-slate-50 last:border-0">
+                  <td className="px-5 py-3 font-medium text-slate-800">{role.name}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        role.isSystem ? 'bg-slate-100 text-slate-500' : 'bg-primary-50 text-primary-600'
+                      }`}
+                    >
+                      {role.isSystem ? 'System' : 'Custom'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-slate-600">{role.permissions.length}</td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href="/permissions"
+                        title="Manage permissions"
+                        className="p-2 text-slate-500 hover:text-primary-600 hover:bg-slate-50 rounded-lg"
+                      >
+                        <KeyRound className="w-4 h-4" />
+                      </Link>
+                      {!role.isSystem && (
+                        <>
+                          <button
+                            onClick={() => openModal(role)}
+                            title="Edit"
+                            className="p-2 text-slate-500 hover:text-primary-600 hover:bg-slate-50 rounded-lg"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(role)}
+                            title="Delete"
+                            className="p-2 text-slate-500 hover:text-error-600 hover:bg-error-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {roles.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400">
+                    No roles yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-          <div className="lg:col-span-3 bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-6">
-            <h3 className="text-sm font-semibold text-slate-700">
-              Permissions for <span className="text-primary-600">{selectedRole?.name}</span>
-            </h3>
-
-            {permissionGroups.map((group) => {
-              const groupKeys = group.permissions.map((p) => p.key)
-              const allChecked = groupKeys.every((k) => selectedKeys.includes(k))
-              const someChecked = groupKeys.some((k) => selectedKeys.includes(k))
-
-              return (
-                <div key={group.group} className="border border-slate-100 rounded-lg p-4">
-                  <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={allChecked}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someChecked && !allChecked
-                      }}
-                      onChange={(e) => toggleGroup(groupKeys, e.target.checked)}
-                      className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm font-semibold text-slate-800">{group.group}</span>
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
-                    {group.permissions.map((perm) => (
-                      <label key={perm.key} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedKeys.includes(perm.key)}
-                          onChange={() => togglePermission(perm.key)}
-                          className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        {perm.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      {editing && (
+        <Modal
+          title={editing === 'new' ? 'Add Role / نیا کردار' : 'Edit Role / کردار ترمیم'}
+          onClose={() => setEditing(null)}
+          maxWidth="max-w-md"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleSave()
+            }}
+          >
+            {modalError && (
+              <div className="bg-error-50 border border-error-200 text-error-700 text-sm rounded-lg px-4 py-3 mb-4">
+                {modalError}
+              </div>
+            )}
+            <Field label="Role Name" urdu="کردار کا نام">
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={50}
+                placeholder="e.g. Manager"
+                className={inputCls}
+              />
+            </Field>
+            <ModalActions
+              onSave={handleSave}
+              saving={creating || renaming}
+              onCancel={() => setEditing(null)}
+              saveLabel={editing === 'new' ? 'Create' : 'Save'}
+            />
+          </form>
+        </Modal>
       )}
     </div>
   )

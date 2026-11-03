@@ -44,6 +44,7 @@ export const NAV_PERMISSIONS: Record<string, PermissionKey> = {
   '/reports': PERMS.reportsView,
   '/users': PERMS.usersView,
   '/roles': PERMS.rolesManage,
+  '/permissions': PERMS.rolesManage,
 }
 
 const HOME_ROUTE_ORDER = [

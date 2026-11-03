@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import DateRangePicker, { type DateRangeValue } from '@/components/DateRangePicker'
 import Link from 'next/link'
 import {
   Building2,
@@ -19,7 +21,12 @@ import { usePermissions, useRequirePermission } from '@/hooks/usePermissions'
 export default function DashboardPage() {
   const allowed = useRequirePermission(PERMS.dashboardView)
   const { user, can } = usePermissions()
-  const { data: stats, isLoading: loading } = useGetDashboardStatsQuery(undefined, { skip: !allowed })
+  const [range, setRange] = useState<DateRangeValue>(() => {
+    const n = new Date()
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+    return { from: today, to: today }
+  })
+  const { data: stats, isFetching: loading } = useGetDashboardStatsQuery(range, { skip: !allowed })
 
   if (!allowed) {
     return (
@@ -86,6 +93,13 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-500 mt-1">
           Overview of {user?.tenantName || 'society'} accounts
         </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-slate-500 font-medium">
+          Date Range <span className="font-urdu">تاریخ</span>
+        </span>
+        <DateRangePicker value={range} onChange={setRange} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
