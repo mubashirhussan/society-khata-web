@@ -12,7 +12,9 @@ import {
   Plus,
   UserPlus,
   FileText,
+  Users,
 } from 'lucide-react'
+import { useGetClientsQuery } from '@/features/clientsApi'
 import { useGetDashboardStatsQuery } from '@/features/dashboardApi'
 import { formatPKR } from '@/lib/utils'
 import { PERMS } from '@/lib/permissions'
@@ -27,6 +29,8 @@ export default function DashboardPage() {
     return { from: today, to: today }
   })
   const { data: stats, isFetching: loading } = useGetDashboardStatsQuery(range, { skip: !allowed })
+
+  const { data: clients = [], isFetching: loadingClients } = useGetClientsQuery(undefined, { skip: !allowed })
 
   if (!allowed) {
     return (
@@ -50,6 +54,7 @@ export default function DashboardPage() {
   const statCards = [
     { label: 'Total Plots', urdu: 'کل پلاٹ', value: s.totalPlots, icon: Building2, color: 'primary' },
     { label: 'Total Shops', urdu: 'کل دکان', value: s.totalShops, icon: ShoppingCart, color: 'accent' },
+    { label: 'Total Clients', urdu: 'کل گاہک', value: loadingClients ? '...' : clients.length, icon: Users, color: 'primary' },
     { label: 'Total Sales', urdu: 'کل فروخت', value: s.totalSales, icon: TrendingUp, color: 'success' },
     { label: 'Total Received', urdu: 'کل وصولی', value: formatPKR(s.totalReceived), icon: Wallet, color: 'success' },
     { label: 'Total Expenses', urdu: 'کل اخراجات', value: formatPKR(s.totalExpenses), icon: Receipt, color: 'error' },
@@ -102,7 +107,7 @@ export default function DashboardPage() {
         <DateRangePicker value={range} onChange={setRange} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
         {statCards.map((card) => (
           <div
             key={card.label}
